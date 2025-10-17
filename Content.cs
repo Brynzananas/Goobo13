@@ -12,20 +12,20 @@ namespace Goobo13
     public class Content : IContentPackProvider
     {
         internal ContentPack contentPack = new ContentPack();
-        public string identifier => Main.ModGuid + ".ContentProvider";
-        public static List<GameObject> bodies = new List<GameObject>();
-        public static List<BuffDef> buffs = new List<BuffDef>();
-        public static List<SkillDef> skills = new List<SkillDef>();
-        public static List<SkillFamily> skillFamilies = new List<SkillFamily>();
-        public static List<GameObject> projectiles = new List<GameObject>();
-        public static List<GameObject> networkPrefabs = new List<GameObject>();
-        public static List<SurvivorDef> survivors = new List<SurvivorDef>();
-        public static List<Type> states = new List<Type>();
-        public static List<NetworkSoundEventDef> sounds = new List<NetworkSoundEventDef>();
-        public static List<UnlockableDef> unlockableDefs = new List<UnlockableDef>();
-        public static List<GameObject> masters = new List<GameObject>();
-        public static List<EffectDef> effects = new List<EffectDef>();
-        public static List<ItemDef> items = new List<ItemDef>();
+        public string identifier => Goobo13Plugin.ModGuid + ".ContentProvider";
+        public static List<GameObject> bodies = [];
+        public static List<BuffDef> buffs = [];
+        public static List<SkillDef> skills = [];
+        public static List<SkillFamily> skillFamilies = [];
+        public static List<GameObject> projectiles = [];
+        public static List<GameObject> networkPrefabs = [];
+        public static List<SurvivorDef> survivors = [];
+        public static List<Type> states = [];
+        public static List<NetworkSoundEventDef> sounds = [];
+        public static List<UnlockableDef> unlockableDefs = [];
+        public static List<GameObject> masters = [];
+        public static List<EffectDef> effects = [];
+        public static List<ItemDef> items = [];
         public IEnumerator FinalizeAsync(FinalizeAsyncArgs args)
         {
             args.ReportProgress(1f);

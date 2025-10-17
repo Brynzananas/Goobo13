@@ -3,11 +3,6 @@ using RoR2;
 using RoR2.ContentManagement;
 using RoR2.Projectile;
 using RoR2.Skills;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -49,18 +44,13 @@ namespace Goobo13
         public static BodyIndex Goobo13CloneBodyIndex;
         public static void Init()
         {
-            assetBundle = AssetBundle.LoadFromFileAsync(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Main.PInfo.Location), "assetbundles", "goobo13assets")).assetBundle;
+            assetBundle = AssetBundle.LoadFromFileAsync(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Goobo13Plugin.PInfo.Location), "assetbundles", "goobo13assets")).assetBundle;
             Material[] materials = assetBundle.LoadAllAssets<Material>();
             for (int i = 0; i < materials.Length; i++)
             {
                 Material material = materials[i];
                 if (!material.shader.name.StartsWith("StubbedRoR2"))
                 {
-                    continue;
-                }
-                if (material.name == "matCommando")
-                {
-                    material = Addressables.LoadAssetAsync<Material>("RoR2/Base/Commando/matCommandoDualies.mat").WaitForCompletion();
                     continue;
                 }
                 string shaderName = material.shader.name.Replace("StubbedRoR2", "RoR2") + ".shader";
@@ -76,7 +66,7 @@ namespace Goobo13
             Goobo13Master = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13MonsterMaster.prefab").RegisterCharacterMaster();
             Goobo13CloneMaster = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13CloneMonsterMaster.prefab").RegisterCharacterMaster();
             Goobo13Emotes = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13Emotes.prefab");
-            if (Main.emotesEnabled) ModCompatabilities.EmoteCompatability.Init();
+            if (Goobo13Plugin.emotesEnabled) ModCompatabilities.EmoteCompatability.Init();
             CharacterBody characterBody = Goobo13Body.GetComponent<CharacterBody>();
             CameraTargetParams cameraTargetParams = Goobo13Body.GetComponent<CameraTargetParams>();
             cameraTargetParams.cameraParams = Addressables.LoadAssetAsync<CharacterCameraParams>("RoR2/Base/Common/ccpStandardMelee.asset").WaitForCompletion();
@@ -109,6 +99,6 @@ namespace Goobo13
             GooboDeployableSlot = DeployableAPI.RegisterDeployableSlot(GetGobooDeployableSlot);
             ContentManager.collectContentPackProviders += (addContentPackProvider) => addContentPackProvider(new Content());
         }
-        public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => 30;
+        public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => SummonGoobosConfig.maxAmount.Value;
     }
 }

@@ -46,11 +46,11 @@ namespace Goobo13
     }
     public class Punch : BaseGooboState
     {
-        public static float baseDamageCoefficient = 3f;
-        public static float procCoefficient = 1f;
-        public static float baseDuration = 0.5f;
-        public static float baseTimeToAttack = 0.25f;
-        public static float baseSelfPush = 24f;
+        public static float baseDamageCoefficient = PunchConfig.damageCoefficient.Value;
+        public static float procCoefficient = PunchConfig.procCoefficient.Value;
+        public static float baseDuration = PunchConfig.duration.Value;
+        public static float baseTimeToAttack = PunchConfig.timeToAttack.Value;
+        public static float baseSelfPush = PunchConfig.selfPush.Value;
         public static float baseUpTransitionSpeed = 0.1f;
         public static float baseDownTransitionSpeed = 0.1f;
         public static DamageType damageType = DamageType.Generic;
@@ -67,6 +67,7 @@ namespace Goobo13
         public float pushAwayForce;
         public bool step;
         private bool fired;
+        private float rootMotionVelocity;
         public override void OnEnter()
         {
             base.OnEnter();
@@ -106,6 +107,7 @@ namespace Goobo13
             timeToAttack = baseTimeToAttack / characterBody.attackSpeed;
             upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
             downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
+            rootMotionVelocity = selfPush;
         }
         public override void FixedUpdate()
         {
@@ -113,21 +115,31 @@ namespace Goobo13
             if (fixedAge >= timeToAttack)
             {
                 if (isAuthority)
-                overlapAttack.Fire();
+                {
+                    overlapAttack.Fire();
+                    if (characterMotor)
+                    {
+                        Vector3 velocityDirection = GetAimRay().direction;
+                        velocityDirection.y = 0f;
+                        velocityDirection.Normalize();
+                        float pushPower = Mathf.SmoothDamp(selfPush, 0f, ref rootMotionVelocity, duration - timeToAttack, float.PositiveInfinity, Time.fixedDeltaTime);
+                        characterMotor.rootMotion += velocityDirection * pushPower * Time.fixedDeltaTime;
+                    }
+                }
                 if (!fired)
                 {
-                    if (isAuthority)
-                    {
-                        Vector3 velocity = (characterDirection ? GetAimRay().direction : characterDirection.forward) * selfPush;
-                        if (characterMotor)
-                        {
-                            characterMotor.velocity += velocity;
-                        }
-                        else if (rigidbody)
-                        {
-                            rigidbody.velocity += velocity;
-                        }
-                    }
+                    //if (isAuthority)
+                    //{
+                        //Vector3 velocity = (characterDirection ? GetAimRay().direction : characterDirection.forward) * selfPush;
+                        //if (characterMotor)
+                        //{
+                        //    characterMotor.velocity += velocity;
+                        //}
+                        //else if (rigidbody)
+                        //{
+                        //    rigidbody.velocity += velocity;
+                        //}
+                    //}
 
                     PlayCrossfade("UpperBody, Override", step ? "Punch2Down" : "Punch1Down", "UpperBody.playbackRate", duration - timeToAttack, downTransitionSpeed);
                     fired = true;
@@ -143,106 +155,14 @@ namespace Goobo13
             return InterruptPriority.Skill;
         }
     }
-    /*public class Punch : BaseGooboState, SteppedSkillDef.IStepSetter
-    {
-        public static float baseDamageCoefficient = 3f;
-        public static float procCoefficient = 1f;
-        public static float baseSuperDamageCoefficient = 5f;
-        public static float superProcCoefficient = 1f;
-        public static float baseDuration = 1f;
-        public static float baseSuperDuration = 2f;
-        public static float baseSelfPush = 6f;
-        public static float baseSuperSelfPush = 9f;
-        public static DamageType damageType = DamageType.Generic;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
-        public static int maxStep = 3;
-        public float damageCoefficient;
-        public float duration;
-        public float selfPush;
-        public HitBoxGroup hitBoxGroup;
-        public OverlapAttack overlapAttack;
-        public Vector3 forceVector;
-        public float pushAwayForce;
-        public int step;
-        public override void OnEnter()
-        {
-            base.OnEnter();
-            SetValues();
-            if (isAuthority)
-            {
-                StartAimMode(2f, true);
-                hitBoxGroup = FindHitBoxGroup(step >= maxStep ? "SuperPunch" : "Punch");
-                if (hitBoxGroup)
-                {
-                    overlapAttack = new OverlapAttack();
-                    overlapAttack.attacker = gameObject;
-                    overlapAttack.damage = damageCoefficient * damageStat;
-                    overlapAttack.damageColorIndex = DamageColorIndex.Default;
-                    overlapAttack.damageType = new DamageTypeCombo(DamageType.Generic, DamageTypeExtended.Generic, GetDamageSource());
-                    overlapAttack.forceVector = forceVector;
-                    overlapAttack.hitBoxGroup = hitBoxGroup;
-                    overlapAttack.hitEffectPrefab = null;
-                    NetworkSoundEventDef networkSoundEventDef = null;
-                    overlapAttack.impactSound = ((networkSoundEventDef != null) ? networkSoundEventDef.index : NetworkSoundEventIndex.Invalid);
-                    overlapAttack.inflictor = base.gameObject;
-                    overlapAttack.isCrit = RollCrit();
-                    overlapAttack.procChainMask = default(ProcChainMask);
-                    overlapAttack.pushAwayForce = pushAwayForce;
-                    overlapAttack.procCoefficient = procCoefficient;
-                    overlapAttack.teamIndex = GetTeam();
-                }
-                Vector3 velocity = transform.forward * selfPush;
-                if (characterMotor)
-                {
-                    characterMotor.velocity += velocity;
-                }else if (rigidbody)
-                {
-                    rigidbody.velocity += velocity;
-                }
-            }
-        }
-        public void SetValues()
-        {
-            if (step >= maxStep)
-            {
-                damageCoefficient = baseSuperDamageCoefficient;
-                duration = baseSuperDuration;
-                selfPush = baseSuperSelfPush;
-            }
-            else
-            {
-                damageCoefficient = baseDamageCoefficient;
-                duration = baseDuration;
-                selfPush = baseSelfPush;
-            }
-        }
-        public override void FixedUpdate()
-        {
-            base.FixedUpdate();
-            if (!isAuthority) return;
-            StartAimMode();
-            overlapAttack.Fire();
-            if (fixedAge >= duration) outer.SetNextStateToMain();
-        }
-        public void UpdateOverlapAttack()
-        {
-            if (!isAuthority) return;
-            overlapAttack.damage = damageCoefficient * characterBody.damage;
-        }
-        public void SetStep(int i) => step = i;
-        public override InterruptPriority GetMinimumInterruptPriority()
-        {
-            return InterruptPriority.Skill;
-        }
-    }*/
     public class SuperPunch : BaseGooboState
     {
-        public static float baseDamageCoefficient = 5f;
-        public static float procCoefficient = 1f;
-        public static float baseDuration = 1f;
-        public static float baseTimeToAttack = 0.5f;
-        public static float baseRadius = 6f;
-        public static float force = 300f;
+        public static float baseDamageCoefficient => SuperPunchConfig.damageCoefficient.Value;
+        public static float procCoefficient => SuperPunchConfig.procCoefficient.Value;
+        public static float baseDuration => SuperPunchConfig.duration.Value;
+        public static float baseTimeToAttack => SuperPunchConfig.timeToAttack.Value;
+        public static float baseRadius => SuperPunchConfig.radius.Value;
+        public static float force => SuperPunchConfig.force.Value;
         public static float baseUpTransitionSpeed = 0.1f;
         public static float baseDownTransitionSpeed = 0.1f;
         public static DamageType damageType = DamageType.Stun1s;
@@ -261,7 +181,7 @@ namespace Goobo13
         {
             base.OnEnter();
             SetValues();
-            PlayCrossfade("UpperBody, Override", "SlamUp", "UpperBody.playbackRate", timeToAttack, upTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "Punch3Up", "UpperBody.playbackRate", timeToAttack, upTransitionSpeed);
             if (isAuthority)
             {
                 StartAimMode();
@@ -278,7 +198,7 @@ namespace Goobo13
         }
         public void Fire(Vector3 position)
         {
-            PlayCrossfade("UpperBody, Override", "SlamDown", "UpperBody.playbackRate", duration - timeToAttack, downTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "Punch3Down", "UpperBody.playbackRate", duration - timeToAttack, downTransitionSpeed);
             if (isAuthority)
             {
                 BlastAttack blastAttack = new BlastAttack()
@@ -299,12 +219,12 @@ namespace Goobo13
                 };
                 blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
                 blastAttack.Fire();
-                EffectData effectData = new()
-                {
-                    origin = blastAttack.position,
-                    scale = blastAttack.radius,
-                };
-                EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                //EffectData effectData = new()
+                //{
+                //    origin = blastAttack.position,
+                //    scale = blastAttack.radius,
+                //};
+                //EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
             }
             fired = true;
         }
@@ -320,12 +240,15 @@ namespace Goobo13
             return InterruptPriority.Skill;
         }
     }
+    public class Slam : BaseGooboState
+    {
+    }
     public class ThrowGrenade : BaseGooboState
     {
-        public static float damageCoefficient = 1f;
-        public static float baseTimeToThrow = 0.5f;
-        public static float baseDuration = 1f;
-        public static float force = 300f;
+        public static float damageCoefficient => ThrowGrenadeConfig.damageCoefficient.Value;
+        public static float baseTimeToThrow => ThrowGrenadeConfig.timeToAttack.Value;
+        public static float baseDuration => ThrowGrenadeConfig.duration.Value;
+        public static float force = ThrowGrenadeConfig.force.Value;
         public static DamageType damageType = DamageType.Stun1s;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
         public float timeToThrow;
@@ -388,7 +311,7 @@ namespace Goobo13
     }
     public class Decoy : BaseGooboState
     {
-        public static float cloakDuration = 3f;
+        public static float cloakDuration => DecoyConfig.duration.Value;
         public override void OnEnter()
         {
             base.OnEnter();
@@ -420,9 +343,9 @@ namespace Goobo13
     {
         public static GameObject projectile = Assets.GooboGrenadeType1Projectile;
         public static float maxDistance = 32f;
-        public static float damageCoefficient = 2f;
-        public static float force = 100f;
-        public static float timeToTarget = 0.25f;
+        public static float damageCoefficient => FireMinionsConfig.damageCoefficient.Value;
+        public static float force = FireMinionsConfig.force.Value;
+        public static float timeToTarget = FireMinionsConfig.timeToTarget.Value;
         public static DamageType damageType = DamageType.Generic;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
         public bool crit;

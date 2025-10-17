@@ -16,8 +16,20 @@ namespace Goobo13
 {
     public static class Utils
     {
-        public static int maxSpawnedGoboos = 30;
-        public static int secondsToLive = 10;
+        public const string DamageCoefficientName = "Damage Coefficient";
+        public const string ProcCoefficientName = "Proc Coefficient";
+        public const string RadiusName = "Radius";
+        public const string ForceName = "Force";
+        public const string SelfPushName = "Self Push";
+        public const string DurationName = "Duration";
+        public const string TimeToAttackName = "Time to Attack";
+        public const string SummonGoobosName = "Goobo Juxtapose";
+        public const string PunchName = "Goobo Punch";
+        public const string SuperPunchName = "Goobo Super Punch";
+        public const string SlamName = "Slam";
+        public const string ThrowGrenadeName = "Goobo Grenade";
+        public const string DecoyName = "Clone Walk";
+        public const string FireMinionsName = "Corrosive Dogpile";
         public static bool GetClosestNodePosition(Vector3 position, HullClassification hullClassification, float maxRadius, out Vector3 nodePosition)
         {
             NodeGraph groundNodes = SceneInfo.instance.groundNodes;
@@ -55,7 +67,7 @@ namespace Goobo13
                 CharacterBody gooboBody = gooboMaster.GetBody();
                 if (gooboMaster.inventory)
                 {
-                    gooboMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, secondsToLive);
+                    gooboMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, SummonGoobosConfig.lifetime.Value);
                 }
 
             }
@@ -77,12 +89,12 @@ namespace Goobo13
         }
         public static ConfigEntry<T> CreateConfig<T>(string section, string key, T defaultValue, string description)
         {
-            return CreateConfig(Main.configFile, section, key, defaultValue, description);
+            return CreateConfig(Goobo13Plugin.configFile, section, key, defaultValue, description);
         }
         public static ConfigEntry<T> CreateConfig<T>(ConfigFile configFile, string section, string key, T defaultValue, string description)
         {
             ConfigEntry<T> entry = configFile.Bind(section, key, defaultValue, description);
-            if (Main.riskOfOptionsEnabled) ModCompatabilities.RiskOfOptionsCompatability.AddConfig(entry);
+            if (Goobo13Plugin.riskOfOptionsEnabled) ModCompatabilities.RiskOfOptionsCompatability.AddConfig(entry);
             return entry;
         }
         public static string GetInScenePath(Transform transform)
@@ -180,12 +192,6 @@ namespace Goobo13
         {
             states.Add(type);
             return type;
-        }
-        public static T ModifySkill<T>(this T skillDef, string reloadSoundEvent, int bonusStockMultiplier) where T : SkillDef
-        {
-            skillDef.SetCustomCooldownRefreshSound(reloadSoundEvent);
-            skillDef.SetBonusStockMultiplier(bonusStockMultiplier);
-            return skillDef;
         }
         public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
         {

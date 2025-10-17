@@ -62,7 +62,7 @@ namespace Goobo13
                 if (damageInfo.HasModdedDamageType(Assets.ChanceToSpawnGooboDamageType))
                 {
                     float luck = obj.attackerMaster ? Mathf.Max(0f, obj.attackerMaster.luck) : 0f;
-                    if (Util.CheckRoll(GooboChanceSpawn, luck))
+                    if (Util.CheckRoll(GooboChanceSpawn * damageInfo.procCoefficient, luck))
                     {
                         Vector3 vector3 = Utils.GetClosestNodePosition(damageInfo.position, HullClassification.Human, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : damageInfo.position;
                         CharacterMaster decoyMaster = Utils.SpawnGoobo(obj.attackerMaster, vector3, Quaternion.identity);

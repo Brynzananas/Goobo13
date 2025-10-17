@@ -1,13 +1,8 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
-using MonoMod.RuntimeDetour;
-using R2API;
 using R2API.Utils;
 using System.Security;
 using System.Security.Permissions;
-using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.UIElements;
 
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -20,15 +15,16 @@ namespace Goobo13
     [BepInPlugin(ModGuid, ModName, ModVer)]
     [BepInDependency(R2API.R2API.PluginGUID, R2API.R2API.PluginVersion)]
     [BepInDependency(R2API.DamageAPI.PluginGUID, R2API.DamageAPI.PluginVersion)]
+    [BepInDependency(R2API.DeployableAPI.PluginGUID, R2API.DeployableAPI.PluginVersion)]
+    [BepInDependency(R2API.DotAPI.PluginGUID, R2API.DotAPI.PluginVersion)]
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     //[R2APISubmoduleDependency(nameof(CommandHelper))]
     [System.Serializable]
-    public class Main : BaseUnityPlugin
+    public class Goobo13Plugin : BaseUnityPlugin
     {
         public const string ModGuid = "com.brynzananas.goobo13";
         public const string ModName = "Goobo13";
         public const string ModVer = "1.0.0";
-
         public static bool emotesEnabled { get; private set; }
         public static bool riskOfOptionsEnabled { get; private set; }
         public static BepInEx.PluginInfo PInfo { get; private set; }
