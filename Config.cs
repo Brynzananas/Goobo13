@@ -1,4 +1,5 @@
 ﻿using BepInEx.Configuration;
+using RoR2;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,18 +8,6 @@ using static Goobo13.Utils;
 
 namespace Goobo13
 {
-    public static class Config
-    {
-        public static void Init()
-        {
-            SummonGoobosConfig.Init();
-            PunchConfig.Init();
-            SuperPunchConfig.Init();
-            ThrowGrenadeConfig.Init();
-            DecoyConfig.Init();
-            FireMinionsConfig.Init();
-        }
-    }
     public static class SummonGoobosConfig
     {
         public static void Init()
@@ -55,7 +44,7 @@ namespace Goobo13
             radius = CreateConfig(SuperPunchName, RadiusName, 6f, "");
             force = CreateConfig(SuperPunchName, ForceName, 300f, "");
             duration = CreateConfig(SuperPunchName, DurationName, 0.5f, "");
-            timeToAttack = CreateConfig(SuperPunchName, TimeToAttackName, 0.25f, "");
+            falloffModel = CreateConfig(SuperPunchName, "TimeToAttackName", BlastAttack.FalloffModel.None, "");
         }
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> procCoefficient;
@@ -63,6 +52,7 @@ namespace Goobo13
         public static ConfigEntry<float> force;
         public static ConfigEntry<float> duration;
         public static ConfigEntry<float> timeToAttack;
+        public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
     }
     public static class ThrowGrenadeConfig
     {

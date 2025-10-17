@@ -163,11 +163,11 @@ namespace Goobo13
         public static float baseTimeToAttack => SuperPunchConfig.timeToAttack.Value;
         public static float baseRadius => SuperPunchConfig.radius.Value;
         public static float force => SuperPunchConfig.force.Value;
-        public static float baseUpTransitionSpeed = 0.1f;
-        public static float baseDownTransitionSpeed = 0.1f;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
         public static DamageType damageType = DamageType.Stun1s;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
-        public static BlastAttack.FalloffModel falloffModel = BlastAttack.FalloffModel.SweetSpot;
+        public static BlastAttack.FalloffModel falloffModel = BlastAttack.FalloffModel.None;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float damageCoefficient;
@@ -249,8 +249,12 @@ namespace Goobo13
         public static float baseTimeToThrow => ThrowGrenadeConfig.timeToAttack.Value;
         public static float baseDuration => ThrowGrenadeConfig.duration.Value;
         public static float force = ThrowGrenadeConfig.force.Value;
+        public static float baseUpTransitionSpeed = 0.1f;
+        public static float baseDownTransitionSpeed = 0.1f;
         public static DamageType damageType = DamageType.Stun1s;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public float upTransitionSpeed;
+        public float downTransitionSpeed;
         public float timeToThrow;
         public float duration;
         public GameObject currentGrenade;
@@ -260,7 +264,7 @@ namespace Goobo13
             base.OnEnter();
             StartAimMode();
             SetValues();
-            PlayAnimation("UpperBody, Override", "ThrowUp", "UpperBody.playbackRate", timeToThrow);
+            PlayCrossfade("UpperBody, Override", "ThrowUp", "UpperBody.playbackRate", timeToThrow, upTransitionSpeed);
             if (isAuthority)
             {
                 GooboRandomGrenadeSkillDef.InstanceData instanceData = activatorSkillSlot && activatorSkillSlot.skillInstanceData != null ? activatorSkillSlot.skillInstanceData as GooboRandomGrenadeSkillDef.InstanceData : null;
@@ -272,7 +276,7 @@ namespace Goobo13
         }
         public void Fire(Ray ray)
         {
-            PlayAnimation("UpperBody, Override", "ThrowDown", "UpperBody.playbackRate", duration - timeToThrow);
+            PlayAnimation("UpperBody, Override", "ThrowDown", "UpperBody.playbackRate", duration - timeToThrow, downTransitionSpeed);
             if (isAuthority)
             {
                 DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
@@ -303,6 +307,8 @@ namespace Goobo13
         {
             timeToThrow = baseTimeToThrow / characterBody.attackSpeed;
             duration = baseDuration / characterBody.attackSpeed;
+            upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
+            downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {

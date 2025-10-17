@@ -18,7 +18,6 @@ namespace Goobo13
     [BepInDependency(R2API.DeployableAPI.PluginGUID, R2API.DeployableAPI.PluginVersion)]
     [BepInDependency(R2API.DotAPI.PluginGUID, R2API.DotAPI.PluginVersion)]
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
-    //[R2APISubmoduleDependency(nameof(CommandHelper))]
     [System.Serializable]
     public class Goobo13Plugin : BaseUnityPlugin
     {
@@ -36,6 +35,12 @@ namespace Goobo13
             emotesEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(ModCompatabilities.EmoteCompatability.GUID);
             riskOfOptionsEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(ModCompatabilities.RiskOfOptionsCompatability.GUID);
             Assets.Init();
+            SummonGoobosConfig.Init();
+            PunchConfig.Init();
+            SuperPunchConfig.Init();
+            ThrowGrenadeConfig.Init();
+            DecoyConfig.Init();
+            FireMinionsConfig.Init();
             Hooks.SetHooks();
         }
         public void OnDestroy()
