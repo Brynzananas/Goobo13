@@ -32,23 +32,28 @@ namespace Goobo13
         public static class RiskOfOptionsCompatability
         {
             public const string GUID = "com.rune580.riskofoptions";
-            public static void AddConfig<T>(T config) where T : ConfigEntryBase
+            public static void AddConfig<T1, T2>(T1 config, T2 value) where T1 : ConfigEntryBase
             {
-                if (config is ConfigEntry<float>)
+                if (value is float)
                 {
                     ModSettingsManager.AddOption(new FloatFieldOption(config as ConfigEntry<float>));
                 }
-                if (config is ConfigEntry<bool>)
+                if (value is bool)
                 {
                     ModSettingsManager.AddOption(new CheckBoxOption(config as ConfigEntry<bool>));
                 }
-                if (config is ConfigEntry<int>)
+                if (value is int)
                 {
                     ModSettingsManager.AddOption(new IntFieldOption(config as ConfigEntry<int>));
                 }
-                if (config is ConfigEntry<string>)
+                if (value is string)
                 {
                     ModSettingsManager.AddOption(new StringInputFieldOption(config as ConfigEntry<string>));
+                }
+                if (value is Enum)
+                {
+
+                    ModSettingsManager.AddOption(new ChoiceOption(config as ConfigEntry<T2>));
                 }
             }
         }

@@ -51,7 +51,7 @@ namespace Goobo13
                         {
                             attackerObject = attackerBody.gameObject,
                             victimObject = obj.victimBody.gameObject,
-                            totalDamage = float.MaxValue,
+                            totalDamage = attackerBody.damage * GooboCorrosionDuration,
                             damageMultiplier = GooboCorrosionDamageCoefficient,
                             duration = GooboCorrosionDuration,
                             dotIndex = Assets.GooboCorrosionDotIndex,

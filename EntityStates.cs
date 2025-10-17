@@ -53,6 +53,8 @@ namespace Goobo13
         public static float baseSelfPush = PunchConfig.selfPush.Value;
         public static float baseUpTransitionSpeed = 0.1f;
         public static float baseDownTransitionSpeed = 0.1f;
+        public static float effectScale = 3f;
+        public static float effectRotation = -35f;
         public static DamageType damageType = DamageType.Generic;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
         public float upTransitionSpeed;
@@ -60,6 +62,7 @@ namespace Goobo13
         public float damageCoefficient;
         public float duration;
         public float timeToAttack;
+        public float remainingTime;
         public float selfPush;
         public HitBoxGroup hitBoxGroup;
         public OverlapAttack overlapAttack;
@@ -72,7 +75,7 @@ namespace Goobo13
         {
             base.OnEnter();
             SetValues();
-            PlayCrossfade("UpperBody, Override", step ? "Punch2Up" : "Punch1Up", "UpperBody.playbackRate", timeToAttack, upTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", step ? "Punch2Up" : "Punch1Up", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToAttack), upTransitionSpeed);
             if (isAuthority)
             {
                 StartAimMode();
@@ -95,7 +98,6 @@ namespace Goobo13
                     overlapAttack.pushAwayForce = pushAwayForce;
                     overlapAttack.procCoefficient = procCoefficient;
                     overlapAttack.teamIndex = GetTeam();
-                    overlapAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
                 }
             }
         }
@@ -103,11 +105,11 @@ namespace Goobo13
         {
             damageCoefficient = baseDamageCoefficient;
             duration = baseDuration / characterBody.attackSpeed;
-            selfPush = baseSelfPush;
+            selfPush = baseSelfPush * characterBody.attackSpeed;
             timeToAttack = baseTimeToAttack / characterBody.attackSpeed;
             upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
             downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
-            rootMotionVelocity = selfPush;
+            remainingTime = duration - timeToAttack;
         }
         public override void FixedUpdate()
         {
@@ -122,7 +124,7 @@ namespace Goobo13
                         Vector3 velocityDirection = GetAimRay().direction;
                         velocityDirection.y = 0f;
                         velocityDirection.Normalize();
-                        float pushPower = Mathf.SmoothDamp(selfPush, 0f, ref rootMotionVelocity, duration - timeToAttack, float.PositiveInfinity, Time.fixedDeltaTime);
+                        float pushPower = (duration - (fixedAge - remainingTime)) * selfPush;
                         characterMotor.rootMotion += velocityDirection * pushPower * Time.fixedDeltaTime;
                     }
                 }
@@ -141,7 +143,19 @@ namespace Goobo13
                         //}
                     //}
 
-                    PlayCrossfade("UpperBody, Override", step ? "Punch2Down" : "Punch1Down", "UpperBody.playbackRate", duration - timeToAttack, downTransitionSpeed);
+                    PlayCrossfade("UpperBody, Override", step ? "Punch2Down" : "Punch1Down", "UpperBody.playbackRate", Mathf.Max(0.01f, remainingTime), downTransitionSpeed);
+                    Transform transform = characterBody.aimOriginTransform;
+                    Transform mdlTransform = characterBody.modelLocator && characterBody.modelLocator.modelTransform ? characterBody.modelLocator.modelTransform : this.transform;
+                    Vector3 rotation = new Vector3(mdlTransform.eulerAngles.x, mdlTransform.eulerAngles.y, mdlTransform.eulerAngles.z + (step ? effectRotation : 180f - effectRotation));
+                    EffectData effectData = new EffectData()
+                    {
+                        origin = transform.position,
+                        rootObject = transform.gameObject,
+                        genericFloat = duration - timeToAttack,
+                        rotation = Quaternion.Euler(rotation),
+                        scale = effectScale
+                    };
+                    EffectManager.SpawnEffect(Assets.GooboPunchEffect.prefab, effectData, false);
                     fired = true;
                 }
             }
@@ -163,11 +177,11 @@ namespace Goobo13
         public static float baseTimeToAttack => SuperPunchConfig.timeToAttack.Value;
         public static float baseRadius => SuperPunchConfig.radius.Value;
         public static float force => SuperPunchConfig.force.Value;
-        public static float baseUpTransitionSpeed = 0.05f;
-        public static float baseDownTransitionSpeed = 0.05f;
-        public static DamageType damageType = DamageType.Stun1s;
+        public static float baseUpTransitionSpeed = 0.1f;
+        public static float baseDownTransitionSpeed = 0.1f;
+        public static DamageType damageType = DamageType.Generic;
         public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
-        public static BlastAttack.FalloffModel falloffModel = BlastAttack.FalloffModel.None;
+        public static BlastAttack.FalloffModel falloffModel => SuperPunchConfig.falloffModel.Value;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float damageCoefficient;
@@ -181,7 +195,7 @@ namespace Goobo13
         {
             base.OnEnter();
             SetValues();
-            PlayCrossfade("UpperBody, Override", "Punch3Up", "UpperBody.playbackRate", timeToAttack, upTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "Punch3Up", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToAttack), upTransitionSpeed);
             if (isAuthority)
             {
                 StartAimMode();
@@ -198,7 +212,7 @@ namespace Goobo13
         }
         public void Fire(Vector3 position)
         {
-            PlayCrossfade("UpperBody, Override", "Punch3Down", "UpperBody.playbackRate", duration - timeToAttack, downTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "Punch3Down", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
             if (isAuthority)
             {
                 BlastAttack blastAttack = new BlastAttack()
@@ -234,6 +248,11 @@ namespace Goobo13
             if (!fired && fixedAge >= timeToAttack) Fire(characterBody.footPosition);
             if (!isAuthority) return;
             if (fixedAge >= duration) outer.SetNextStateToMain();
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            PlayCrossfade("UpperBody, Override", "Punch3Transition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {
@@ -336,6 +355,7 @@ namespace Goobo13
                         }
                     }
                 characterBody.AddTimedBuff(RoR2Content.Buffs.Cloak, cloakDuration);
+                characterBody.AddTimedBuff(RoR2Content.Buffs.CloakSpeed, cloakDuration);
             }
             if (!isAuthority) return;
             outer.SetNextStateToMain();
@@ -347,7 +367,7 @@ namespace Goobo13
     }
     public class FireMinions : BaseGooboState
     {
-        public static GameObject projectile = Assets.GooboGrenadeType1Projectile;
+        public static GameObject projectile = Assets.GooboBall;
         public static float maxDistance = 32f;
         public static float damageCoefficient => FireMinionsConfig.damageCoefficient.Value;
         public static float force = FireMinionsConfig.force.Value;
@@ -366,16 +386,12 @@ namespace Goobo13
         public void ConvertMinionsToProjectiles()
         {
             GooboThrowGooboMinionsSkillDef.InstanceData instanceData = activatorSkillSlot == null || activatorSkillSlot.skillInstanceData == null ? null : activatorSkillSlot.skillInstanceData as GooboThrowGooboMinionsSkillDef.InstanceData;
-            Debug.Log(instanceData);
             if (instanceData == null) return;
             GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = instanceData.gobooThrowGooboMinionsTracker;
-            Debug.Log(gobooThrowGooboMinionsTracker);
             if (!gobooThrowGooboMinionsTracker) return;
             HurtBox trackingTarget = gobooThrowGooboMinionsTracker.trackingTarget;
-            Debug.Log(trackingTarget);
             if (!trackingTarget) return;
             CharacterMaster characterMaster = characterBody.master;
-            Debug.Log(characterMaster);
             if (!characterMaster) return;
             MinionOwnership.MinionGroup minionGroup = null;
             for (int i = 0; i < MinionOwnership.MinionGroup.instancesList.Count; i++)
@@ -387,18 +403,14 @@ namespace Goobo13
                     break;
                 }
             }
-            Debug.Log(minionGroup);
             if (minionGroup == null) return;
             foreach (MinionOwnership minion in minionGroup.members)
             {
-                Debug.Log(minion);
                 if (minion == null) continue;
                 CharacterMaster minionMaster = minion.GetComponent<CharacterMaster>();
-                Debug.Log(minionMaster);
                 if (minionMaster == null) continue;
                 CharacterBody minionBody = minionMaster.GetBody();
-                Debug.Log(minionBody);
-                if (minionBody == null || minionBody.bodyIndex != Assets.Goobo13BodyIndex) continue;
+                if (minionBody == null || minionBody.bodyIndex != Assets.Goobo13CloneBodyIndex) continue;
                 Vector3 position = trackingTarget.transform.position;
                 Vector3 direction = position - minionBody.corePosition;
                 float distance = direction.magnitude;
@@ -438,6 +450,34 @@ namespace Goobo13
         public override InterruptPriority GetMinimumInterruptPriority()
         {
             return InterruptPriority.PrioritySkill;
+        }
+    }
+    public class GooboDeath : BaseState
+    {
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            if (base.modelLocator)
+            {
+                if (base.modelLocator.modelBaseTransform)
+                {
+                    EntityState.Destroy(base.modelLocator.modelBaseTransform.gameObject);
+                }
+                if (base.modelLocator.modelTransform)
+                {
+                    EntityState.Destroy(base.modelLocator.modelTransform.gameObject);
+                }
+            }
+            EffectManager.SpawnEffect(Assets.GooboSplash.prefab, new EffectData
+            {
+                origin = base.transform.position,
+                rotation = base.transform.rotation
+            }, false);
+
+            if (NetworkServer.active)
+            {
+                EntityState.Destroy(base.gameObject);
+            }
         }
     }
 }

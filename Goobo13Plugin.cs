@@ -17,6 +17,8 @@ namespace Goobo13
     [BepInDependency(R2API.DamageAPI.PluginGUID, R2API.DamageAPI.PluginVersion)]
     [BepInDependency(R2API.DeployableAPI.PluginGUID, R2API.DeployableAPI.PluginVersion)]
     [BepInDependency(R2API.DotAPI.PluginGUID, R2API.DotAPI.PluginVersion)]
+    [BepInDependency(ModCompatabilities.RiskOfOptionsCompatability.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(ModCompatabilities.EmoteCompatability.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
     [System.Serializable]
     public class Goobo13Plugin : BaseUnityPlugin

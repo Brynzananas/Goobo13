@@ -17,12 +17,15 @@ namespace Goobo13
         public static GameObject Goobo13Master;
         public static GameObject Goobo13CloneMaster;
         public static GameObject Goobo13Emotes;
+        public static GameObject GooboBall;
         public static GameObject GooboGrenadeType1Projectile;
         public static GameObject GooboGrenadeType2Projectile;
         public static GameObject GooboGrenadeType3Projectile;
         public static GameObject GooboGrenadeType4Projectile;
         public static GameObject GooboGrenadeType5Projectile;
         public static EffectDef GooboExplosion;
+        public static EffectDef GooboPunchEffect;
+        public static EffectDef GooboSplash;
         public static PassiveItemSkillDef GooboJuxtapose;
         public static SteppedSkillDef GooboPunch;
         public static GooboRandomGrenadeSkillDef GooboGrenade;
@@ -49,11 +52,12 @@ namespace Goobo13
             for (int i = 0; i < materials.Length; i++)
             {
                 Material material = materials[i];
-                if (!material.shader.name.StartsWith("StubbedRoR2"))
+                if (!material.shader.name.StartsWith("StubbedRoR2") && !material.shader.name.StartsWith("StubbedDecalicious"))
                 {
                     continue;
                 }
-                string shaderName = material.shader.name.Replace("StubbedRoR2", "RoR2") + ".shader";
+                bool isRoR2 = material.shader.name.StartsWith("StubbedRoR2");
+                string shaderName = (isRoR2 ? material.shader.name.Replace("StubbedRoR2", "RoR2") : material.shader.name.Replace("StubbedDecalicious", "Decalicious")) + ".shader";
                 Shader replacementShader = Addressables.LoadAssetAsync<Shader>(shaderName).WaitForCompletion();
                 if (replacementShader)
                 {
@@ -73,16 +77,20 @@ namespace Goobo13
             characterBody.preferredPodPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/SurvivorPod/SurvivorPod.prefab").WaitForCompletion();
             characterBody._defaultCrosshairPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Croco/CrocoCrosshair.prefab").WaitForCompletion();
             GameObject gameObject = Goobo13Body.GetComponent<ModelLocator>().modelTransform.gameObject;
-            gameObject.GetComponent<FootstepHandler>().footstepDustPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Common/VFX/GenericFootstepDust.prefab").WaitForCompletion();
-            GooboGrenadeType1Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType1Projectile.prefab").RegisterProjectile();
-            ProjectileDamage projectileDamage = GooboGrenadeType1Projectile.GetComponent<ProjectileDamage>();
+            GameObject genericDust = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Common/VFX/GenericFootstepDust.prefab").WaitForCompletion();
+            gameObject.GetComponent<FootstepHandler>().footstepDustPrefab = genericDust;
+            gameObject = Goobo13CloneBody.GetComponent<ModelLocator>().modelTransform.gameObject;
+            gameObject.GetComponent<FootstepHandler>().footstepDustPrefab = genericDust;
+            GooboBall = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboBall.prefab").RegisterProjectile();
             GooboCorrosionDamageType = DamageAPI.ReserveDamageType();
             ChanceToSpawnGooboDamageType = DamageAPI.ReserveDamageType();
-            projectileDamage.damageType.AddModdedDamageType(GooboCorrosionDamageType);
+            GooboGrenadeType1Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType1Projectile.prefab").RegisterProjectile();
             GooboGrenadeType3Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType3Projectile.prefab").RegisterProjectile();
             GooboGrenadeType4Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType4Projectile.prefab").RegisterProjectile();
             GooboGrenadeType5Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType5Projectile.prefab").RegisterProjectile();
             GooboExplosion = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboExplosion.prefab").RegisterEffect();
+            GooboPunchEffect = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboPunchEffect.prefab").RegisterEffect();
+            GooboSplash = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboCloneExplosion.prefab").RegisterEffect();
             GooboJuxtapose = assetBundle.LoadAsset<PassiveItemSkillDef>("Assets/Goobo13/Skills/GooboJuxtapose.asset").RegisterSkillDef();
             GooboPunch = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/GooboPunch.asset").RegisterSkillDef();
             GooboGrenade = assetBundle.LoadAsset<GooboRandomGrenadeSkillDef>("Assets/Goobo13/Skills/GooboGrenade.asset").RegisterSkillDef();

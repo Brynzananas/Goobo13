@@ -1,5 +1,6 @@
 ﻿using BepInEx.Configuration;
 using RoR2;
+using RoR2.Projectile;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -43,8 +44,9 @@ namespace Goobo13
             procCoefficient = CreateConfig(SuperPunchName, ProcCoefficientName, 1f, "");
             radius = CreateConfig(SuperPunchName, RadiusName, 6f, "");
             force = CreateConfig(SuperPunchName, ForceName, 300f, "");
-            duration = CreateConfig(SuperPunchName, DurationName, 0.5f, "");
-            falloffModel = CreateConfig(SuperPunchName, "TimeToAttackName", BlastAttack.FalloffModel.None, "");
+            duration = CreateConfig(SuperPunchName, DurationName, 1f, "");
+            timeToAttack = CreateConfig(SuperPunchName, TimeToAttackName, 0.5f, "");
+            falloffModel = CreateConfig(SuperPunchName, FalloffName, BlastAttack.FalloffModel.None, "");
         }
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> procCoefficient;
@@ -83,7 +85,16 @@ namespace Goobo13
             damageCoefficient = CreateConfig(FireMinionsName, DamageCoefficientName, 3f, "");
             force = CreateConfig(FireMinionsName, ForceName, 100f, "");
             timeToTarget = CreateConfig(FireMinionsName, "Time to Target", 0.25f, "");
+            timeToTarget.SettingChanged += TimeToTarget_SettingChanged;
+            TimeToTarget_SettingChanged(timeToTarget, null);
         }
+
+        private static void TimeToTarget_SettingChanged(object sender, EventArgs e)
+        {
+            ProjectileImpactExplosion projectileImpactExplosion = Assets.GooboBall.GetComponent<ProjectileImpactExplosion>();
+            projectileImpactExplosion.lifetime = timeToTarget.Value;
+        }
+
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> force;
         public static ConfigEntry<float> timeToTarget;

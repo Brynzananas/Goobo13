@@ -1,4 +1,5 @@
-﻿using RoR2;
+﻿using JetBrains.Annotations;
+using RoR2;
 using RoR2.Projectile;
 using RoR2.Skills;
 using System;
@@ -49,6 +50,7 @@ namespace Goobo13
     }
     public class GobooThrowGooboMinionsTracker : MonoBehaviour
     {
+        public GooboThrowGooboMinionsSkillDef.InstanceData instanceData;
         public GameObject trackingPrefab;
         public float maxTrackingDistance = 48f;
         public float maxTrackingAngle = 45f;
@@ -88,6 +90,14 @@ namespace Goobo13
         }
         public void MyFixedUpdate(float deltaTime)
         {
+            if (instanceData != null && instanceData.genericSkill && instanceData.genericSkill.stock > 0)
+            {
+                indicator.active = true;
+            }
+            else
+            {
+                indicator.active = false;
+            }
             trackerUpdateStopwatch += deltaTime;
             if (trackerUpdateStopwatch >= 1f / trackerUpdateFrequency)
             {
@@ -155,10 +165,21 @@ namespace Goobo13
     {
         public override BaseSkillInstanceData OnAssigned(GenericSkill skillSlot)
         {
-            return new InstanceData
+            base.OnAssigned(skillSlot);
+            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetOrAddComponent<GobooThrowGooboMinionsTracker>();
+            InstanceData instanceData = new InstanceData
             {
-                gobooThrowGooboMinionsTracker = skillSlot.GetOrAddComponent<GobooThrowGooboMinionsTracker>()
+                gobooThrowGooboMinionsTracker = gobooThrowGooboMinionsTracker,
+                genericSkill = skillSlot
             };
+            gobooThrowGooboMinionsTracker.instanceData = instanceData;
+            return instanceData;
+        }
+        public override void OnUnassigned(GenericSkill skillSlot)
+        {
+            base.OnUnassigned(skillSlot);
+            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetComponent<GobooThrowGooboMinionsTracker>();
+            if (gobooThrowGooboMinionsTracker) Destroy(gobooThrowGooboMinionsTracker);
         }
         public override void OnFixedUpdate(GenericSkill skillSlot, float deltaTime)
         {
@@ -182,11 +203,26 @@ namespace Goobo13
             GobooThrowGooboMinionsTracker huntressTracker = skillSlot.skillInstanceData == null ? null : ((InstanceData)skillSlot.skillInstanceData).gobooThrowGooboMinionsTracker;
             return (huntressTracker != null) ? huntressTracker.trackingTarget : null;
         }
-        public override bool CanExecute(GenericSkill skillSlot) => HasTarget(skillSlot) && GetGooboMinionsCount(skillSlot) > 0 && base.CanExecute(skillSlot);
+        public override bool CanExecute(GenericSkill skillSlot) => HasTarget(skillSlot) && skillSlot.stock > 0 && base.CanExecute(skillSlot);
         public override bool IsReady(GenericSkill skillSlot) => base.IsReady(skillSlot) && HasTarget(skillSlot);
         public class InstanceData : BaseSkillInstanceData
         {
             public GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker;
+            public GenericSkill genericSkill;
+        }
+    }
+    public class GooboPunchEffect : MonoBehaviour
+    {
+        public EffectComponent effectComponent;
+        public ParticleSystem[] particleSystems;
+        public void Update()
+        {
+            if (!effectComponent || effectComponent.effectData == null) return;
+            float speed = 1f / effectComponent.effectData.genericFloat;
+            foreach (ParticleSystem particleSystem in particleSystems)
+            {
+                particleSystem.playbackSpeed = speed;
+            }
         }
     }
 }

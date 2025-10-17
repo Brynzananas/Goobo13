@@ -23,6 +23,7 @@ namespace Goobo13
         public const string SelfPushName = "Self Push";
         public const string DurationName = "Duration";
         public const string TimeToAttackName = "Time to Attack";
+        public const string FalloffName = "Falloff";
         public const string SummonGoobosName = "Goobo Juxtapose";
         public const string PunchName = "Goobo Punch";
         public const string SuperPunchName = "Goobo Super Punch";
@@ -94,7 +95,7 @@ namespace Goobo13
         public static ConfigEntry<T> CreateConfig<T>(ConfigFile configFile, string section, string key, T defaultValue, string description)
         {
             ConfigEntry<T> entry = configFile.Bind(section, key, defaultValue, description);
-            if (Goobo13Plugin.riskOfOptionsEnabled) ModCompatabilities.RiskOfOptionsCompatability.AddConfig(entry);
+            if (Goobo13Plugin.riskOfOptionsEnabled) ModCompatabilities.RiskOfOptionsCompatability.AddConfig(entry, defaultValue);
             return entry;
         }
         public static string GetInScenePath(Transform transform)
