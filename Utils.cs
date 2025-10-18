@@ -70,7 +70,13 @@ namespace Goobo13
                 {
                     gooboMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, SummonGoobosConfig.lifetime.Value);
                 }
-
+                if (gooboBody)
+                {
+                    gooboBody.doNotReassignToTeamBasedCollisionLayer = true;
+                    gooboBody.gameObject.layer = LayerIndex.debris.intVal; // LayerIndex.GetAppropriateFakeLayerForTeam(gooboBody.teamComponent.teamIndex).intVal;
+                    if (gooboBody.characterMotor && gooboBody.characterMotor.Motor)
+                    gooboBody.characterMotor.Motor.RebuildCollidableLayers();
+                }
             }
             return gooboMaster;
         }

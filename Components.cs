@@ -1,5 +1,8 @@
-﻿using JetBrains.Annotations;
+﻿using HG;
+using JetBrains.Annotations;
+using R2API;
 using RoR2;
+using RoR2.Orbs;
 using RoR2.Projectile;
 using RoR2.Skills;
 using System;
@@ -8,6 +11,8 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UIElements;
+using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace Goobo13
 {
@@ -51,7 +56,7 @@ namespace Goobo13
     public class GobooThrowGooboMinionsTracker : MonoBehaviour
     {
         public GooboThrowGooboMinionsSkillDef.InstanceData instanceData;
-        public GameObject trackingPrefab;
+        public static GameObject trackingPrefab;
         public float maxTrackingDistance = 48f;
         public float maxTrackingAngle = 45f;
         public float trackerUpdateFrequency = 10f;
@@ -120,14 +125,22 @@ namespace Goobo13
             search.maxAngleFilter = maxTrackingAngle;
             search.RefreshCandidates();
             search.FilterOutGameObject(gameObject);
-            trackingTarget = search.GetResults().FirstOrDefault<HurtBox>();
+            foreach (HurtBox hurtBox in search.GetResults())
+            {
+                if (hurtBox.healthComponent && hurtBox.healthComponent.alive)
+                {
+                    trackingTarget = hurtBox;
+                    return;
+                }
+            }
+            trackingTarget = null;
         }
     }
     [RequireComponent(typeof(ProjectileController))]
     [RequireComponent(typeof(Rigidbody))]
     public class GooboProjectrileIntoGoobos : MonoBehaviour
     {
-        public static int gooboAmount = 1;
+        public static int gooboAmount = 2;
         public static float minSpread = 5f;
         public static float maxSpread = 15f;
         public ProjectileController projectileController;
@@ -225,4 +238,5 @@ namespace Goobo13
             }
         }
     }
+    
 }

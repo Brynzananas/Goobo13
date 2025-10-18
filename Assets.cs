@@ -23,12 +23,17 @@ namespace Goobo13
         public static GameObject GooboGrenadeType3Projectile;
         public static GameObject GooboGrenadeType4Projectile;
         public static GameObject GooboGrenadeType5Projectile;
+        public static GameObject GooboCorrosiveDogpileTrackingIndicator;
+        public static GameObject GooboCloneMissileTrackingIndicator;
+        public static EffectDef GooboOrb;
         public static EffectDef GooboExplosion;
         public static EffectDef GooboPunchEffect;
         public static EffectDef GooboSplash;
         public static PassiveItemSkillDef GooboJuxtapose;
         public static SteppedSkillDef GooboPunch;
+        public static SkillDef GooboSlam;
         public static GooboRandomGrenadeSkillDef GooboGrenade;
+        public static SkillDef GooboMissile;
         public static SkillDef CloneWalk;
         public static GooboThrowGooboMinionsSkillDef CorrosiveDogpile;
         public static SkillFamily Passive;
@@ -37,6 +42,8 @@ namespace Goobo13
         public static SkillFamily Utility;
         public static SkillFamily Special;
         public static BuffDef GooboCorrosion;
+        public static BuffDef GooboCorrosionCharge;
+        public static BuffDef GooboConsumptionCharge;
         public static ItemDef GooboJuxtaposePassive;
         public static DotController.DotDef GooboCorrosionDot;
         public static DotController.DotIndex GooboCorrosionDotIndex;
@@ -49,9 +56,8 @@ namespace Goobo13
         {
             assetBundle = AssetBundle.LoadFromFileAsync(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Goobo13Plugin.PInfo.Location), "assetbundles", "goobo13assets")).assetBundle;
             Material[] materials = assetBundle.LoadAllAssets<Material>();
-            for (int i = 0; i < materials.Length; i++)
+            foreach (Material material in assetBundle.LoadAllAssets<Material>())
             {
-                Material material = materials[i];
                 if (!material.shader.name.StartsWith("StubbedRoR2") && !material.shader.name.StartsWith("StubbedDecalicious"))
                 {
                     continue;
@@ -84,6 +90,8 @@ namespace Goobo13
             GooboBall = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboBall.prefab").RegisterProjectile();
             GooboCorrosionDamageType = DamageAPI.ReserveDamageType();
             ChanceToSpawnGooboDamageType = DamageAPI.ReserveDamageType();
+            GooboCorrosiveDogpileTrackingIndicator = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Huntress/HuntressTrackingIndicator.prefab").WaitForCompletion();
+            GooboCloneMissileTrackingIndicator = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/Seeker/SeekerTrackingIndicator.prefab").WaitForCompletion();
             GooboGrenadeType1Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType1Projectile.prefab").RegisterProjectile();
             GooboGrenadeType3Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType3Projectile.prefab").RegisterProjectile();
             GooboGrenadeType4Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType4Projectile.prefab").RegisterProjectile();
@@ -91,9 +99,11 @@ namespace Goobo13
             GooboExplosion = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboExplosion.prefab").RegisterEffect();
             GooboPunchEffect = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboPunchEffect.prefab").RegisterEffect();
             GooboSplash = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboCloneExplosion.prefab").RegisterEffect();
+            GooboOrb = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboOrb.prefab").RegisterEffect();
             GooboJuxtapose = assetBundle.LoadAsset<PassiveItemSkillDef>("Assets/Goobo13/Skills/GooboJuxtapose.asset").RegisterSkillDef();
             GooboPunch = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/GooboPunch.asset").RegisterSkillDef();
             GooboGrenade = assetBundle.LoadAsset<GooboRandomGrenadeSkillDef>("Assets/Goobo13/Skills/GooboGrenade.asset").RegisterSkillDef();
+            GooboMissile = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboMissile.asset").RegisterSkillDef();
             CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/CloneWalk.asset").RegisterSkillDef();
             CorrosiveDogpile = assetBundle.LoadAsset<GooboThrowGooboMinionsSkillDef>("Assets/Goobo13/Skills/CorrosiveDogpile.asset").RegisterSkillDef();
             GooboJuxtaposePassive = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/GooboJuxtaposePassive.asset").RegisterItemDef();
@@ -105,6 +115,7 @@ namespace Goobo13
             Special = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Special.asset").RegisterSkillFamily();
             GooboCorrosionDot = Utils.CreateDOT(GooboCorrosion, out GooboCorrosionDotIndex, true, 1f, 1f, DamageColorIndex.DeathMark, null);
             GooboDeployableSlot = DeployableAPI.RegisterDeployableSlot(GetGobooDeployableSlot);
+            OrbAPI.AddOrb<GooboOrb>();
             ContentManager.collectContentPackProviders += (addContentPackProvider) => addContentPackProvider(new Content());
         }
         public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => SummonGoobosConfig.maxAmount.Value;

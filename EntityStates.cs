@@ -1,9 +1,11 @@
 ﻿using EntityStates;
+using HG;
 using MonoMod.RuntimeDetour;
 using R2API;
 using RoR2;
 using RoR2.Audio;
 using RoR2.CharacterAI;
+using RoR2.Orbs;
 using RoR2.Projectile;
 using RoR2.Skills;
 using System;
@@ -11,6 +13,8 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UIElements;
+using UnityEngine.UIElements.StyleSheets;
 
 namespace Goobo13
 {
@@ -232,6 +236,7 @@ namespace Goobo13
                     position = position
                 };
                 blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
+                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
                 blastAttack.Fire();
                 //EffectData effectData = new()
                 //{
@@ -258,9 +263,6 @@ namespace Goobo13
         {
             return InterruptPriority.Skill;
         }
-    }
-    public class Slam : BaseGooboState
-    {
     }
     public class ThrowGrenade : BaseGooboState
     {
@@ -300,6 +302,7 @@ namespace Goobo13
             {
                 DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
                 if (currentGrenade == Assets.GooboGrenadeType1Projectile) damageTypeCombo.AddModdedDamageType(Assets.GooboCorrosionDamageType); // This is stupid
+                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
                 FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
                 {
                     projectilePrefab = currentGrenade,
@@ -342,8 +345,9 @@ namespace Goobo13
             base.OnEnter();
             if (NetworkServer.active)
             {
-                Vector3 vector3 = Utils.GetClosestNodePosition(characterBody.footPosition, characterBody.hullClassification, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : characterBody.footPosition;
-                CharacterMaster decoyMaster = Utils.SpawnGoobo(characterBody.master, vector3, transform.rotation);
+                //Vector3 vector3 = Utils.GetClosestNodePosition(characterBody.footPosition, characterBody.hullClassification, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : characterBody.footPosition;
+                Vector3 directionVector = characterDirection ? characterDirection.forward : transform.forward;
+                CharacterMaster decoyMaster = Utils.SpawnGoobo(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
                 CharacterBody decoyBody = decoyMaster ? decoyMaster.GetBody() : null;
                 if (decoyBody)
                     foreach (BaseAI baseAI in Hooks.baseAIs)
@@ -416,13 +420,30 @@ namespace Goobo13
                 float distance = direction.magnitude;
                 //Ray ray = new Ray(position, direction.normalized);
                 //if (!Physics.Raycast(ray, maxDistance, LayerIndex.world.mask)) continue;
-                //HealthComponent healthComponent = minionBody.healthComponent;
-                //Debug.Log(healthComponent);
-                //if (healthComponent == null) continue;
                 position = minionBody.corePosition;
                 minionMaster.TrueKill();
-                //healthComponent.Suicide();
-                Fire(position, direction, distance);
+                DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
+                damageTypeCombo.AddModdedDamageType(Assets.GooboCorrosionDamageType);
+                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
+                GooboOrb gooboOrb = new GooboOrb
+                {
+                    attacker = gameObject,
+                    duration = timeToTarget,
+                    gooboAmount = 0,
+                    damage = characterBody.damage * damageCoefficient,
+                    procCoefficient = 1f,
+                    crit = RollCrit(),
+                    falloffModel = BlastAttack.FalloffModel.SweetSpot,
+                    force = force,
+                    damageTypeCombo = damageTypeCombo,
+                    origin = position,
+                    radius = 3f,
+                    teamIndex = GetTeam(),
+                    target = trackingTarget,
+                    visualPrefab = Assets.GooboOrb.prefab
+                };
+                OrbManager.instance.AddOrb(gooboOrb);
+                //Fire(position, direction, distance);
             }
         }
         public void Fire(Vector3 position, Vector3 direction, float distance)
@@ -478,6 +499,331 @@ namespace Goobo13
             {
                 EntityState.Destroy(base.gameObject);
             }
+        }
+    }
+    public class AimGooboMissile : BaseGooboState
+    {
+        public static float baseDuration = 0.25f;
+        public static float maxDistance = 32f;
+        public static float maxAngle = 25f;
+        public static GameObject trackingPrefab = Assets.GooboCloneMissileTrackingIndicator;
+        public float duration;
+        public BullseyeSearch bullseyeSearch = new BullseyeSearch();
+        public HurtBox targetHurtbox;
+        public HealthComponent targetHealthComponent;
+        public Indicator indicator;
+        public void SearchTarget()
+        {
+            Ray aimRay = base.GetAimRay();
+            bullseyeSearch.filterByDistinctEntity = true;
+            bullseyeSearch.filterByLoS = true;
+            bullseyeSearch.minDistanceFilter = 0f;
+            bullseyeSearch.maxDistanceFilter = maxDistance;
+            bullseyeSearch.minAngleFilter = 0f;
+            bullseyeSearch.maxAngleFilter = maxAngle;
+            bullseyeSearch.viewer = characterBody;
+            bullseyeSearch.searchOrigin = aimRay.origin;
+            bullseyeSearch.searchDirection = aimRay.direction;
+            bullseyeSearch.sortMode = BullseyeSearch.SortMode.DistanceAndAngle;
+            bullseyeSearch.teamMaskFilter = TeamMask.GetUnprotectedTeams(base.GetTeam());
+            bullseyeSearch.RefreshCandidates();
+            bullseyeSearch.FilterOutGameObject(base.gameObject);
+            foreach (HurtBox hurtBox in bullseyeSearch.GetResults())
+            {
+                if (hurtBox.healthComponent && hurtBox.healthComponent.alive)
+                {
+                    targetHurtbox = hurtBox;
+                    return;
+                }
+            }
+            targetHurtbox = null;
+        }
+        public void SetValues()
+        {
+            duration = baseDuration / characterBody.attackSpeed;
+        }
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            SetValues();
+            if (isAuthority)
+            {
+                indicator = new Indicator(gameObject, trackingPrefab);
+                indicator.active = true;
+            }
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            if (indicator != null)
+            {
+                indicator.active = false;
+            }
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            StartAimMode();
+            if (isAuthority)
+            {
+                SearchTarget();
+                if (fixedAge >= duration && !IsKeyDownAuthority())
+                {
+                    if (targetHurtbox && targetHurtbox.healthComponent)
+                    {
+                        NetworkInstanceId networkInstanceId = targetHurtbox.healthComponent.netId;
+                        outer.SetNextState(new FireGooboMissile { networkInstanceId = networkInstanceId, hurtboxIndex = targetHurtbox.indexInGroup, damageSource = GetDamageSource(), targetHurtbox = targetHurtbox });
+                        if (activatorSkillSlot) activatorSkillSlot.stock--;
+                    }
+                    else
+                    {
+                        outer.SetNextStateToMain();
+                    }
+                }
+            }
+        }
+        public override void Update()
+        {
+            base.Update();
+            if (indicator != null)
+            {
+                if (targetHurtbox)
+                {
+                    indicator.active = true;
+                    indicator.targetTransform = targetHurtbox.transform;
+                }
+                else
+                {
+                    indicator.active = false;
+                    indicator.targetTransform = null;
+                }
+            }
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.Skill;
+        }
+    }
+    public class FireGooboMissile : BaseState
+    {
+        public static float damageCoefficient = 5f;
+        public static float procCoefficient = 1f;
+        public static float force = 100f;
+        public static int baseGooboAmount = 2;
+        public static float baseArrivalTime = 0.25f;
+        public static float baseDuration = 0.25f;
+        public static float radius = 3f;
+        public static BlastAttack.FalloffModel falloffModel = BlastAttack.FalloffModel.SweetSpot;
+        public static DamageType damageType = DamageType.Generic;
+        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public DamageSource damageSource;
+        public HurtBox targetHurtbox;
+        public int hurtboxIndex;
+        public NetworkInstanceId networkInstanceId;
+        public float duration;
+        public float arrivalTime;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            SetValues();
+            StartAimMode();
+            if (NetworkServer.active && targetHurtbox)
+            {
+                DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, damageSource);
+                GooboOrb gooboOrb = new GooboOrb
+                {
+                    attacker = gameObject,
+                    duration = arrivalTime,
+                    gooboAmount = baseGooboAmount,
+                    damage = characterBody.damage * damageCoefficient,
+                    procCoefficient = procCoefficient,
+                    crit = RollCrit(),
+                    falloffModel = falloffModel,
+                    force = force,
+                    damageTypeCombo = damageSource,
+                    origin = characterBody.aimOrigin,
+                    radius = radius,
+                    teamIndex = GetTeam(),
+                    target = targetHurtbox,
+                    visualPrefab = Assets.GooboOrb.prefab
+                };
+                OrbManager.instance.AddOrb(gooboOrb);
+            }
+        }
+        public void SetValues()
+        {
+            duration = baseDuration / characterBody.attackSpeed;
+            arrivalTime = baseArrivalTime / characterBody.attackSpeed;
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (fixedAge >= duration && isAuthority)
+            {
+                outer.SetNextStateToMain();
+            }
+        }
+        public override void OnSerialize(NetworkWriter writer)
+        {
+            base.OnSerialize(writer);
+            writer.Write(networkInstanceId);
+            writer.Write(hurtboxIndex);
+            writer.Write((int)damageSource);
+        }
+        public override void OnDeserialize(NetworkReader reader)
+        {
+            base.OnDeserialize(reader);
+            networkInstanceId = reader.ReadNetworkId();
+            hurtboxIndex = reader.ReadInt32();
+            damageSource = (DamageSource)reader.ReadInt32();
+            GameObject gameObject = Util.FindNetworkObject(networkInstanceId);
+            if (!gameObject) return;
+            CharacterBody characterBody = gameObject.GetComponent<CharacterBody>();
+            if (!characterBody) return;
+            HurtBoxGroup hurtBoxGroup = characterBody.hurtBoxGroup;
+            if (!hurtBoxGroup) return;
+            targetHurtbox = hurtBoxGroup.hurtBoxes[hurtboxIndex];
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.PrioritySkill;
+        }
+    }
+    public class ConsumeMinions : BaseState
+    {
+        public static float arrivalTime = 0.25f;
+        public void Convert()
+        {
+            CharacterMaster characterMaster = characterBody.master;
+            if (!characterMaster) return;
+            MinionOwnership.MinionGroup minionGroup = null;
+            for (int i = 0; i < MinionOwnership.MinionGroup.instancesList.Count; i++)
+            {
+                MinionOwnership.MinionGroup minionGroup2 = MinionOwnership.MinionGroup.instancesList[i];
+                if (MinionOwnership.MinionGroup.instancesList[i].ownerId == characterMaster.netId)
+                {
+                    minionGroup = minionGroup2;
+                    break;
+                }
+            }
+            if (minionGroup == null) return;
+            foreach (MinionOwnership minion in minionGroup.members)
+            {
+                if (minion == null) continue;
+                CharacterMaster minionMaster = minion.GetComponent<CharacterMaster>();
+                if (minionMaster == null) continue;
+                CharacterBody minionBody = minionMaster.GetBody();
+                if (minionBody == null || minionBody.bodyIndex != Assets.Goobo13CloneBodyIndex) continue;
+                GooboConsumeOrb gooboConsumeOrb = new GooboConsumeOrb
+                {
+                    duration = arrivalTime,
+                    effectScale = 1f,
+                    origin = minionBody.corePosition,
+                    target = characterBody.mainHurtBox,
+                    visualPrefab = Assets.GooboOrb.prefab
+                };
+                OrbManager.instance.AddOrb(gooboConsumeOrb);
+                minionMaster.TrueKill();
+            }
+        }
+    }
+    public class Slam : BaseGooboState
+    {
+        public static float baseDamageCoefficient = 5f;
+        public static float procCoefficient = 1f;
+        public static float baseDuration = 0.5f;
+        public static float baseTimeToAttack = 0.5f;
+        public static float baseRadius = 6f;
+        public static float force = 300f;
+        public static float baseUpTransitionSpeed = 0.1f;
+        public static float baseDownTransitionSpeed = 0.1f;
+        public static DamageType damageType = DamageType.Stun1s;
+        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public static BlastAttack.FalloffModel falloffModel => BlastAttack.FalloffModel.None;
+        public float upTransitionSpeed;
+        public float downTransitionSpeed;
+        public float damageCoefficient;
+        public float duration;
+        public float radius;
+        public float timeToAttack;
+        public Vector3 forceVector;
+        public float pushAwayForce;
+        private bool fired;
+        private bool fired2;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            SetValues();
+            PlayCrossfade("UpperBody, Override", "SlamUp", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToAttack), upTransitionSpeed);
+            if (isAuthority)
+            {
+                StartAimMode();
+            }
+        }
+        public void SetValues()
+        {
+            damageCoefficient = baseDamageCoefficient;
+            duration = baseDuration / characterBody.attackSpeed;
+            timeToAttack = baseTimeToAttack / characterBody.attackSpeed;
+            radius = baseRadius;
+            upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
+            downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
+        }
+        public void Fire()
+        {
+            PlayCrossfade("UpperBody, Override", "SlamDown", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+            fired = true;
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!fired && fixedAge >= timeToAttack) Fire();
+            if (!isAuthority) return;
+            if (fixedAge >= duration)
+            {
+                if (!fired2)
+                {
+                    BlastAttack blastAttack = new BlastAttack()
+                    {
+                        attacker = gameObject,
+                        baseDamage = characterBody.damage * damageCoefficient,
+                        baseForce = force,
+                        crit = RollCrit(),
+                        damageType = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource()),
+                        falloffModel = falloffModel,
+                        damageColorIndex = DamageColorIndex.Default,
+                        inflictor = gameObject,
+                        losType = BlastAttack.LoSType.None,
+                        procCoefficient = procCoefficient,
+                        radius = radius,
+                        teamIndex = GetTeam(),
+                        position = characterBody.footPosition
+                    };
+                    blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
+                    int buffCount = characterBody.GetBuffCount(Assets.GooboConsumptionCharge);
+                    characterBody.SetBuffCount(Assets.GooboConsumptionCharge.buffIndex, 0);
+                    characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, buffCount);
+                    blastAttack.Fire();
+                    EffectData effectData = new()
+                    {
+                        origin = blastAttack.position,
+                        scale = blastAttack.radius,
+                    };
+                    EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                    fired2 = true;
+                    outer.SetNextStateToMain();
+                }
+
+            }
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            PlayCrossfade("UpperBody, Override", "Punch3Transition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.Skill;
         }
     }
 }
