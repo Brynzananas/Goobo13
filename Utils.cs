@@ -19,18 +19,27 @@ namespace Goobo13
         public const string DamageCoefficientName = "Damage Coefficient";
         public const string ProcCoefficientName = "Proc Coefficient";
         public const string RadiusName = "Radius";
+        public const string DistanceName = "Distance";
         public const string ForceName = "Force";
         public const string SelfPushName = "Self Push";
         public const string DurationName = "Duration";
+        public const string LifetimeName = "Duration";
+        public const string DamageTypeName = "Damage Type";
+        public const string DamageTypeExtendedName = "Damage Type Extended";
+        public const string GooboAmountName = "Goobo Amount";
         public const string TimeToAttackName = "Time to Attack";
+        public const string TimeToTargetName = "Attack Arrival Time";
         public const string FalloffName = "Falloff";
         public const string SummonGoobosName = "Goobo Juxtapose";
         public const string PunchName = "Goobo Punch";
         public const string SuperPunchName = "Goobo Super Punch";
         public const string SlamName = "Slam";
         public const string ThrowGrenadeName = "Goobo Grenade";
+        public const string GooboMissileName = "Goobo Missile";
         public const string DecoyName = "Clone Walk";
+        public const string UnstableDecoyName = "Unstable Clone Walk";
         public const string FireMinionsName = "Corrosive Dogpile";
+        public const string ConsumeMinionsName = "Corrosive Consumption";
         public static bool GetClosestNodePosition(Vector3 position, HullClassification hullClassification, float maxRadius, out Vector3 nodePosition)
         {
             NodeGraph groundNodes = SceneInfo.instance.groundNodes;
@@ -45,7 +54,7 @@ namespace Goobo13
                 return false;
             }
         }
-        public static CharacterMaster SpawnGoobo(CharacterMaster characterMaster, Vector3 position, Quaternion rotation)
+        public static CharacterMaster SpawnGooboClone(CharacterMaster characterMaster, Vector3 position, Quaternion rotation)
         {
             CharacterMaster gooboMaster = null;
             CharacterBody characterBody = characterMaster.GetBody();
@@ -57,7 +66,7 @@ namespace Goobo13
                 masterPrefab = Assets.Goobo13CloneMaster,
                 summonerBodyObject = characterBody.gameObject,
                 teamIndexOverride = characterBody.teamComponent ? characterBody.teamComponent.teamIndex : TeamIndex.None,
-                rotation = rotation
+                rotation = rotation,
             }.Perform();
             if (gooboMaster)
             {
@@ -76,6 +85,51 @@ namespace Goobo13
                     gooboBody.gameObject.layer = LayerIndex.debris.intVal; // LayerIndex.GetAppropriateFakeLayerForTeam(gooboBody.teamComponent.teamIndex).intVal;
                     if (gooboBody.characterMotor && gooboBody.characterMotor.Motor)
                     gooboBody.characterMotor.Motor.RebuildCollidableLayers();
+                }
+            }
+            return gooboMaster;
+        }
+        public static float gooboGummyNoCollisionTime = 2.5f;
+        public static CharacterMaster SpawnGoobo(CharacterMaster characterMaster, Vector3 position, Quaternion rotation)
+        {
+            CharacterMaster gooboMaster = null;
+            CharacterBody characterBody = characterMaster.GetBody();
+            if (characterBody == null) return gooboMaster;
+            gooboMaster = new MasterSummon
+            {
+                position = position,
+                ignoreTeamMemberLimit = true,
+                masterPrefab = Assets.Goobo13Master,
+                summonerBodyObject = characterBody.gameObject,
+                teamIndexOverride = characterBody.teamComponent ? characterBody.teamComponent.teamIndex : TeamIndex.None,
+                rotation = rotation
+            }.Perform();
+            if (gooboMaster)
+            {
+                MasterSuicideOnTimer masterSuicideOnTimer = gooboMaster.GetOrAddComponent<MasterSuicideOnTimer>();
+                masterSuicideOnTimer.lifeTimer = DecoyConfig.lifetime.Value;
+                Deployable deployable = gooboMaster.gameObject.AddComponent<Deployable>();
+                deployable.onUndeploy = new UnityEvent();
+                deployable.onUndeploy.AddListener(new UnityAction(gooboMaster.TrueKill));
+                characterMaster.AddDeployable(deployable, DeployableSlot.GummyClone);
+                CharacterBody gooboBody = gooboMaster.GetBody();
+                if (gooboMaster.inventory)
+                {
+                }
+                if (gooboBody)
+                {
+                    gooboBody.doNotReassignToTeamBasedCollisionLayer = true;
+                    gooboBody.gameObject.layer = LayerIndex.debris.intVal; // LayerIndex.GetAppropriateFakeLayerForTeam(gooboBody.teamComponent.teamIndex).intVal;
+                    if (gooboBody.characterMotor && gooboBody.characterMotor.Motor)
+                        gooboBody.characterMotor.Motor.RebuildCollidableLayers();
+                    ChangeLayerOnTimer changeLayerOnTimer = gooboBody.gameObject.AddComponent<ChangeLayerOnTimer>();
+                    changeLayerOnTimer.timer = gooboGummyNoCollisionTime;
+                    changeLayerOnTimer.layer = LayerIndex.GetAppropriateLayerForTeam(gooboBody.teamComponent.teamIndex);
+                    EntityStateMachine entityStateMachine = gooboBody.GetComponent<EntityStateMachine>();
+                    if (entityStateMachine != null)
+                    {
+                        entityStateMachine.initialStateType = entityStateMachine.mainStateType;
+                    }
                 }
             }
             return gooboMaster;

@@ -16,43 +16,6 @@ using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace Goobo13
 {
-    [CreateAssetMenu(menuName = "RoR2/SkillDef/Goobo/GooboRandomGrenadeSkillDef")]
-    public class GooboRandomGrenadeSkillDef : SkillDef
-    {
-        public GameObject[] grenades;
-        public override BaseSkillInstanceData OnAssigned(GenericSkill skillSlot)
-        {
-            return new InstanceData
-            {
-                currentGrenade = grenades[UnityEngine.Random.Range(0, grenades.Length)]
-            };
-        }
-        public override void OnExecute(GenericSkill skillSlot)
-        {
-            base.OnExecute(skillSlot);
-            SelectGrenade(skillSlot);
-        }
-        public void SelectGrenade(GenericSkill genericSkill)
-        {
-            InstanceData instanceData = genericSkill.skillInstanceData == null ? null : genericSkill.skillInstanceData as InstanceData;
-            if (instanceData == null) return;
-            List<GameObject> grenades = [];
-            int count = 0;
-            foreach (GameObject grenade in this.grenades)
-            {
-                if (grenade == null || grenade == instanceData.currentGrenade) continue;
-                count++;
-                grenades.Add(grenade);
-            }
-            if (count <= 0) return;
-            GameObject newGrenade = grenades[UnityEngine.Random.Range(0, count)];
-            instanceData.currentGrenade = newGrenade;
-        }
-        public class InstanceData : BaseSkillInstanceData
-        {
-            public GameObject currentGrenade;
-        }
-    }
     public class GobooThrowGooboMinionsTracker : MonoBehaviour
     {
         public GooboThrowGooboMinionsSkillDef.InstanceData instanceData;
@@ -156,7 +119,7 @@ namespace Goobo13
             float magnitude = velocity.magnitude;
             for (int i = 0; i < gooboAmount; i++)
             {
-                CharacterMaster gooboMaster = Utils.SpawnGoobo(ownerMaster, transform.position, Quaternion.LookRotation(velocity.normalized));
+                CharacterMaster gooboMaster = Utils.SpawnGooboClone(ownerMaster, transform.position, Quaternion.LookRotation(velocity.normalized));
                 if (!gooboMaster) continue;
                 CharacterBody gooboBody = gooboMaster.GetBody();
                 if (!gooboBody) continue;
@@ -173,57 +136,6 @@ namespace Goobo13
             Destroy(gameObject);
         }
     }
-    [CreateAssetMenu(menuName = "RoR2/SkillDef/Goobo/GooboThrowGooboMinionsSkillDef")]
-    public class GooboThrowGooboMinionsSkillDef : SkillDef
-    {
-        public override BaseSkillInstanceData OnAssigned(GenericSkill skillSlot)
-        {
-            base.OnAssigned(skillSlot);
-            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetOrAddComponent<GobooThrowGooboMinionsTracker>();
-            InstanceData instanceData = new InstanceData
-            {
-                gobooThrowGooboMinionsTracker = gobooThrowGooboMinionsTracker,
-                genericSkill = skillSlot
-            };
-            gobooThrowGooboMinionsTracker.instanceData = instanceData;
-            return instanceData;
-        }
-        public override void OnUnassigned(GenericSkill skillSlot)
-        {
-            base.OnUnassigned(skillSlot);
-            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetComponent<GobooThrowGooboMinionsTracker>();
-            if (gobooThrowGooboMinionsTracker) Destroy(gobooThrowGooboMinionsTracker);
-        }
-        public override void OnFixedUpdate(GenericSkill skillSlot, float deltaTime)
-        {
-            base.OnFixedUpdate(skillSlot, deltaTime);
-            skillSlot.stock = GetGooboMinionsCount(skillSlot);
-        }
-        public static int GetGooboMinionsCount(GenericSkill skillSlot)
-        {
-            CharacterMaster characterMaster = skillSlot.characterBody?.master;
-            if (characterMaster)
-            {
-                return characterMaster.GetDeployableCount(Assets.GooboDeployableSlot);
-            }
-            else
-            {
-                return 0;
-            }
-        }
-        public static bool HasTarget(GenericSkill skillSlot)
-        {
-            GobooThrowGooboMinionsTracker huntressTracker = skillSlot.skillInstanceData == null ? null : ((InstanceData)skillSlot.skillInstanceData).gobooThrowGooboMinionsTracker;
-            return (huntressTracker != null) ? huntressTracker.trackingTarget : null;
-        }
-        public override bool CanExecute(GenericSkill skillSlot) => HasTarget(skillSlot) && skillSlot.stock > 0 && base.CanExecute(skillSlot);
-        public override bool IsReady(GenericSkill skillSlot) => base.IsReady(skillSlot) && HasTarget(skillSlot);
-        public class InstanceData : BaseSkillInstanceData
-        {
-            public GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker;
-            public GenericSkill genericSkill;
-        }
-    }
     public class GooboPunchEffect : MonoBehaviour
     {
         public EffectComponent effectComponent;
@@ -238,5 +150,24 @@ namespace Goobo13
             }
         }
     }
-    
+    public class ChangeLayerOnTimer : MonoBehaviour
+    {
+        public CharacterBody characterBody;
+        public float timer;
+        public int layer;
+        private bool changedCollision;
+        public void FixedUpdate()
+        {
+            timer -= Time.fixedDeltaTime;
+            if (!changedCollision && timer <= 0f)  ChangeCollsion();
+        }
+        public void ChangeCollsion()
+        {
+            changedCollision = true;
+            if (!characterBody) return;
+            characterBody.gameObject.layer = layer;
+            if (characterBody.characterMotor && characterBody.characterMotor.Motor) characterBody.characterMotor.Motor.RebuildCollidableLayers();
+            Destroy(this);
+        }
+    }
 }

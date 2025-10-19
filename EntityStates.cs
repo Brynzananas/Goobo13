@@ -50,17 +50,17 @@ namespace Goobo13
     }
     public class Punch : BaseGooboState
     {
-        public static float baseDamageCoefficient = PunchConfig.damageCoefficient.Value;
-        public static float procCoefficient = PunchConfig.procCoefficient.Value;
-        public static float baseDuration = PunchConfig.duration.Value;
-        public static float baseTimeToAttack = PunchConfig.timeToAttack.Value;
-        public static float baseSelfPush = PunchConfig.selfPush.Value;
-        public static float baseUpTransitionSpeed = 0.1f;
-        public static float baseDownTransitionSpeed = 0.1f;
+        public static float baseDamageCoefficient => PunchConfig.damageCoefficient.Value;
+        public static float procCoefficient => PunchConfig.procCoefficient.Value;
+        public static float baseDuration => PunchConfig.duration.Value;
+        public static float baseTimeToAttack => PunchConfig.timeToAttack.Value;
+        public static float baseSelfPush => PunchConfig.selfPush.Value;
+        public static DamageType damageType => PunchConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => PunchConfig.damageTypeExtended.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
         public static float effectScale = 3f;
         public static float effectRotation = -35f;
-        public static DamageType damageType = DamageType.Generic;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float damageCoefficient;
@@ -123,14 +123,14 @@ namespace Goobo13
                 if (isAuthority)
                 {
                     overlapAttack.Fire();
-                    if (characterMotor)
-                    {
-                        Vector3 velocityDirection = GetAimRay().direction;
-                        velocityDirection.y = 0f;
-                        velocityDirection.Normalize();
-                        float pushPower = (duration - (fixedAge - remainingTime)) * selfPush;
-                        characterMotor.rootMotion += velocityDirection * pushPower * Time.fixedDeltaTime;
-                    }
+                    //if (characterMotor)
+                    //{
+                    //    Vector3 velocityDirection = GetAimRay().direction;
+                    //    velocityDirection.y = 0f;
+                    //    velocityDirection.Normalize();
+                    //    float pushPower = selfPush / remainingTime;
+                    //    characterMotor.rootMotion += velocityDirection * pushPower * Time.fixedDeltaTime;
+                    //}
                 }
                 if (!fired)
                 {
@@ -181,11 +181,11 @@ namespace Goobo13
         public static float baseTimeToAttack => SuperPunchConfig.timeToAttack.Value;
         public static float baseRadius => SuperPunchConfig.radius.Value;
         public static float force => SuperPunchConfig.force.Value;
-        public static float baseUpTransitionSpeed = 0.1f;
-        public static float baseDownTransitionSpeed = 0.1f;
-        public static DamageType damageType = DamageType.Generic;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public static DamageType damageType => SuperPunchConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => SuperPunchConfig.damageTypeExtended.Value;
         public static BlastAttack.FalloffModel falloffModel => SuperPunchConfig.falloffModel.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float damageCoefficient;
@@ -236,7 +236,6 @@ namespace Goobo13
                     position = position
                 };
                 blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
-                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
                 blastAttack.Fire();
                 //EffectData effectData = new()
                 //{
@@ -270,10 +269,10 @@ namespace Goobo13
         public static float baseTimeToThrow => ThrowGrenadeConfig.timeToAttack.Value;
         public static float baseDuration => ThrowGrenadeConfig.duration.Value;
         public static float force = ThrowGrenadeConfig.force.Value;
-        public static float baseUpTransitionSpeed = 0.1f;
-        public static float baseDownTransitionSpeed = 0.1f;
-        public static DamageType damageType = DamageType.Stun1s;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public static DamageType damageType => ThrowGrenadeConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => ThrowGrenadeConfig.damageTypeExtended.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float timeToThrow;
@@ -337,7 +336,7 @@ namespace Goobo13
             return InterruptPriority.PrioritySkill;
         }
     }
-    public class Decoy : BaseGooboState
+    public class Decoy : BaseState
     {
         public static float cloakDuration => DecoyConfig.duration.Value;
         public override void OnEnter()
@@ -347,7 +346,7 @@ namespace Goobo13
             {
                 //Vector3 vector3 = Utils.GetClosestNodePosition(characterBody.footPosition, characterBody.hullClassification, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : characterBody.footPosition;
                 Vector3 directionVector = characterDirection ? characterDirection.forward : transform.forward;
-                CharacterMaster decoyMaster = Utils.SpawnGoobo(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
+                CharacterMaster decoyMaster = Utils.SpawnGooboClone(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
                 CharacterBody decoyBody = decoyMaster ? decoyMaster.GetBody() : null;
                 if (decoyBody)
                     foreach (BaseAI baseAI in Hooks.baseAIs)
@@ -374,10 +373,12 @@ namespace Goobo13
         public static GameObject projectile = Assets.GooboBall;
         public static float maxDistance = 32f;
         public static float damageCoefficient => FireMinionsConfig.damageCoefficient.Value;
-        public static float force = FireMinionsConfig.force.Value;
-        public static float timeToTarget = FireMinionsConfig.timeToTarget.Value;
-        public static DamageType damageType = DamageType.Generic;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public static float procCoefficient => FireMinionsConfig.procCoefficient.Value;
+        public static float force => FireMinionsConfig.force.Value;
+        public static float timeToTarget => FireMinionsConfig.timeToTarget.Value;
+        public static BlastAttack.FalloffModel falloffModel => FireMinionsConfig.falloffModel.Value;
+        public static DamageType damageType => FireMinionsConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => FireMinionsConfig.damageTypeExtended.Value;
         public bool crit;
         public override void OnEnter()
         {
@@ -424,16 +425,15 @@ namespace Goobo13
                 minionMaster.TrueKill();
                 DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
                 damageTypeCombo.AddModdedDamageType(Assets.GooboCorrosionDamageType);
-                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
                 GooboOrb gooboOrb = new GooboOrb
                 {
                     attacker = gameObject,
                     duration = timeToTarget,
                     gooboAmount = 0,
                     damage = characterBody.damage * damageCoefficient,
-                    procCoefficient = 1f,
+                    procCoefficient = procCoefficient,
                     crit = RollCrit(),
-                    falloffModel = BlastAttack.FalloffModel.SweetSpot,
+                    falloffModel = falloffModel,
                     force = force,
                     damageTypeCombo = damageTypeCombo,
                     origin = position,
@@ -503,8 +503,8 @@ namespace Goobo13
     }
     public class AimGooboMissile : BaseGooboState
     {
-        public static float baseDuration = 0.25f;
-        public static float maxDistance = 32f;
+        public static float baseDuration => GooboMissileConfig.timeToAttack.Value;
+        public static float maxDistance => GooboMissileConfig.distance.Value;
         public static float maxAngle = 25f;
         public static GameObject trackingPrefab = Assets.GooboCloneMissileTrackingIndicator;
         public float duration;
@@ -524,7 +524,7 @@ namespace Goobo13
             bullseyeSearch.viewer = characterBody;
             bullseyeSearch.searchOrigin = aimRay.origin;
             bullseyeSearch.searchDirection = aimRay.direction;
-            bullseyeSearch.sortMode = BullseyeSearch.SortMode.DistanceAndAngle;
+            bullseyeSearch.sortMode = BullseyeSearch.SortMode.Angle;
             bullseyeSearch.teamMaskFilter = TeamMask.GetUnprotectedTeams(base.GetTeam());
             bullseyeSearch.RefreshCandidates();
             bullseyeSearch.FilterOutGameObject(base.gameObject);
@@ -606,16 +606,16 @@ namespace Goobo13
     }
     public class FireGooboMissile : BaseState
     {
-        public static float damageCoefficient = 5f;
-        public static float procCoefficient = 1f;
-        public static float force = 100f;
-        public static int baseGooboAmount = 2;
-        public static float baseArrivalTime = 0.25f;
-        public static float baseDuration = 0.25f;
-        public static float radius = 3f;
-        public static BlastAttack.FalloffModel falloffModel = BlastAttack.FalloffModel.SweetSpot;
-        public static DamageType damageType = DamageType.Generic;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public static float damageCoefficient => GooboMissileConfig.damageCoefficient.Value;
+        public static float procCoefficient => GooboMissileConfig.procCoefficient.Value;
+        public static float force => GooboMissileConfig.force.Value;
+        public static int baseGooboAmount => GooboMissileConfig.gooboAmount.Value;
+        public static float baseArrivalTime => GooboMissileConfig.timeToTarget.Value;
+        public static float baseDuration => GooboMissileConfig.duration.Value;
+        public static float radius => GooboMissileConfig.radius.Value;
+        public static BlastAttack.FalloffModel falloffModel => GooboMissileConfig.falloffModel.Value;
+        public static DamageType damageType => GooboMissileConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => GooboMissileConfig.damageTypeExtended.Value;
         public DamageSource damageSource;
         public HurtBox targetHurtbox;
         public int hurtboxIndex;
@@ -691,8 +691,17 @@ namespace Goobo13
     }
     public class ConsumeMinions : BaseState
     {
-        public static float arrivalTime = 0.25f;
-        public void Convert()
+        public static float arrivalTime => ConsumeMinionsConfig.timeToTarget.Value;
+        public float timeToTarget;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            timeToTarget = arrivalTime / characterBody.attackSpeed;
+            if (NetworkServer.active) ConvertMinionsToBuffs();
+            if (!isAuthority) return;
+            outer.SetNextStateToMain();
+        }
+        public void ConvertMinionsToBuffs()
         {
             CharacterMaster characterMaster = characterBody.master;
             if (!characterMaster) return;
@@ -716,7 +725,7 @@ namespace Goobo13
                 if (minionBody == null || minionBody.bodyIndex != Assets.Goobo13CloneBodyIndex) continue;
                 GooboConsumeOrb gooboConsumeOrb = new GooboConsumeOrb
                 {
-                    duration = arrivalTime,
+                    duration = timeToTarget,
                     effectScale = 1f,
                     origin = minionBody.corePosition,
                     target = characterBody.mainHurtBox,
@@ -729,17 +738,16 @@ namespace Goobo13
     }
     public class Slam : BaseGooboState
     {
-        public static float baseDamageCoefficient = 5f;
-        public static float procCoefficient = 1f;
-        public static float baseDuration = 0.5f;
-        public static float baseTimeToAttack = 0.5f;
-        public static float baseRadius = 6f;
-        public static float force = 300f;
-        public static float baseUpTransitionSpeed = 0.1f;
-        public static float baseDownTransitionSpeed = 0.1f;
-        public static DamageType damageType = DamageType.Stun1s;
-        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
-        public static BlastAttack.FalloffModel falloffModel => BlastAttack.FalloffModel.None;
+        public static float baseDamageCoefficient => ConsumeMinionsConfig.damageCoefficient.Value;
+        public static float procCoefficient => ConsumeMinionsConfig.procCoefficient.Value;
+        public static float baseDuration => ConsumeMinionsConfig.duration.Value;
+        public static float baseRadius => ConsumeMinionsConfig.radius.Value;
+        public static float force => ConsumeMinionsConfig.force.Value;
+        public static DamageType damageType => ConsumeMinionsConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => ConsumeMinionsConfig.damageTypeExtended.Value;
+        public static BlastAttack.FalloffModel falloffModel => ConsumeMinionsConfig.falloffModel.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
         public float upTransitionSpeed;
         public float downTransitionSpeed;
         public float damageCoefficient;
@@ -764,7 +772,7 @@ namespace Goobo13
         {
             damageCoefficient = baseDamageCoefficient;
             duration = baseDuration / characterBody.attackSpeed;
-            timeToAttack = baseTimeToAttack / characterBody.attackSpeed;
+            timeToAttack = duration / 2f;
             radius = baseRadius;
             upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
             downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
@@ -778,40 +786,45 @@ namespace Goobo13
         {
             base.FixedUpdate();
             if (!fired && fixedAge >= timeToAttack) Fire();
-            if (!isAuthority) return;
             if (fixedAge >= duration)
             {
                 if (!fired2)
                 {
-                    BlastAttack blastAttack = new BlastAttack()
+                    if (NetworkServer.active)
                     {
-                        attacker = gameObject,
-                        baseDamage = characterBody.damage * damageCoefficient,
-                        baseForce = force,
-                        crit = RollCrit(),
-                        damageType = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource()),
-                        falloffModel = falloffModel,
-                        damageColorIndex = DamageColorIndex.Default,
-                        inflictor = gameObject,
-                        losType = BlastAttack.LoSType.None,
-                        procCoefficient = procCoefficient,
-                        radius = radius,
-                        teamIndex = GetTeam(),
-                        position = characterBody.footPosition
-                    };
-                    blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
-                    int buffCount = characterBody.GetBuffCount(Assets.GooboConsumptionCharge);
-                    characterBody.SetBuffCount(Assets.GooboConsumptionCharge.buffIndex, 0);
-                    characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, buffCount);
-                    blastAttack.Fire();
-                    EffectData effectData = new()
+                        int buffCount = characterBody.GetBuffCount(Assets.GooboConsumptionCharge);
+                        characterBody.SetBuffCount(Assets.GooboConsumptionCharge.buffIndex, 0);
+                        characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, buffCount);
+                    }
+                    if (isAuthority)
                     {
-                        origin = blastAttack.position,
-                        scale = blastAttack.radius,
-                    };
-                    EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                        BlastAttack blastAttack = new BlastAttack()
+                        {
+                            attacker = gameObject,
+                            baseDamage = characterBody.damage * damageCoefficient,
+                            baseForce = force,
+                            crit = RollCrit(),
+                            damageType = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource()),
+                            falloffModel = falloffModel,
+                            damageColorIndex = DamageColorIndex.Default,
+                            inflictor = gameObject,
+                            losType = BlastAttack.LoSType.None,
+                            procCoefficient = procCoefficient,
+                            radius = radius,
+                            teamIndex = GetTeam(),
+                            position = characterBody.footPosition
+                        };
+                        blastAttack.Fire();
+                        EffectData effectData = new()
+                        {
+                            origin = blastAttack.position,
+                            scale = blastAttack.radius,
+                        };
+                        EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                        outer.SetNextStateToMain();
+                    }
                     fired2 = true;
-                    outer.SetNextStateToMain();
+
                 }
 
             }
@@ -819,11 +832,54 @@ namespace Goobo13
         public override void OnExit()
         {
             base.OnExit();
-            PlayCrossfade("UpperBody, Override", "Punch3Transition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+            if (fired2) PlayCrossfade("UpperBody, Override", "SlamTransition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+            if (activatorSkillSlot) activatorSkillSlot.UnsetSkillOverride(gameObject, Assets.GooboSlam, GenericSkill.SkillOverridePriority.Contextual);
+            if (NetworkServer.active) characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 0);
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {
             return InterruptPriority.Skill;
+        }
+    }
+    public class UnstableDecoy : BaseState
+    {
+        public static float healthPercentage => UnstableDecoyConfig.healthPercentage.Value;
+        public static int gooboAmount => UnstableDecoyConfig.gooboAmount.Value;
+        public static float cloakDuration => UnstableDecoyConfig.duration.Value;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            if (NetworkServer.active)
+            {
+                //Vector3 vector3 = Utils.GetClosestNodePosition(characterBody.footPosition, characterBody.hullClassification, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : characterBody.footPosition;
+                Vector3 directionVector = characterDirection ? characterDirection.forward : transform.forward;
+                for (int i = 0; i < gooboAmount; i++) Utils.SpawnGooboClone(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
+                characterBody.AddTimedBuff(RoR2Content.Buffs.Cloak, cloakDuration);
+                characterBody.AddTimedBuff(RoR2Content.Buffs.CloakSpeed, cloakDuration);
+                if (healthComponent && healthPercentage > 0f)
+                {
+                    DamageInfo damageInfo = new DamageInfo
+                    {
+                        damage = healthComponent.combinedHealth * healthPercentage,
+                        position = characterBody.corePosition,
+                        force = Vector3.zero,
+                        damageColorIndex = DamageColorIndex.Default,
+                        crit = false,
+                        attacker = null,
+                        inflictor = null,
+                        damageType = DamageType.NonLethal,
+                        procCoefficient = 0f,
+                        procChainMask = default
+                    };
+                    healthComponent.TakeDamage(damageInfo);
+                }
+            }
+            if (!isAuthority) return;
+            outer.SetNextStateToMain();
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.PrioritySkill;
         }
     }
 }

@@ -11,42 +11,53 @@ namespace Goobo13
 {
     public static class SummonGoobosConfig
     {
+        public const string name = SummonGoobosName;
         public static void Init()
         {
-            lifetime = CreateConfig(SummonGoobosName, "Clone Lifetime", 10, "");
-            maxAmount = CreateConfig(SummonGoobosName, "Clone max Amount", 30, "");
-
+            lifetime = CreateConfig(name, "Clone Lifetime", 10, "");
+            maxAmount = CreateConfig(name, "Clone max Amount", 30, "");
+            maxAmount.SettingChanged += MaxAmount_SettingChanged;
+            MaxAmount_SettingChanged(maxAmount, null);
         }
+        private static void MaxAmount_SettingChanged(object sender, EventArgs e) => Assets.CorrosiveDogpile.baseMaxStock = maxAmount.Value;
         public static ConfigEntry<int> lifetime;
         public static ConfigEntry<int> maxAmount;
     }
     public static class PunchConfig
     {
+        public const string name = PunchName;
         public static void Init()
         {
-            damageCoefficient = CreateConfig(PunchName, DamageCoefficientName, 3f, "");
-            procCoefficient = CreateConfig(PunchName, ProcCoefficientName, 1f, "");
-            duration = CreateConfig(PunchName, DurationName, 0.5f, "");
-            timeToAttack = CreateConfig(PunchName, TimeToAttackName, 0.25f, "");
-            selfPush = CreateConfig(PunchName, SelfPushName, 24f, "");
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            duration = CreateConfig(name, DurationName, 0.5f, "");
+            timeToAttack = CreateConfig(name, TimeToAttackName, 0.25f, "");
+            selfPush = CreateConfig(name, SelfPushName, 3f, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
         }
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> procCoefficient;
         public static ConfigEntry<float> duration;
         public static ConfigEntry<float> timeToAttack;
         public static ConfigEntry<float> selfPush;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
     }
     public static class SuperPunchConfig
     {
+        public const string name = SuperPunchName;
         public static void Init()
         {
-            damageCoefficient = CreateConfig(SuperPunchName, DamageCoefficientName, 3f, "");
-            procCoefficient = CreateConfig(SuperPunchName, ProcCoefficientName, 1f, "");
-            radius = CreateConfig(SuperPunchName, RadiusName, 6f, "");
-            force = CreateConfig(SuperPunchName, ForceName, 300f, "");
-            duration = CreateConfig(SuperPunchName, DurationName, 1f, "");
-            timeToAttack = CreateConfig(SuperPunchName, TimeToAttackName, 0.5f, "");
-            falloffModel = CreateConfig(SuperPunchName, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            radius = CreateConfig(name, RadiusName, 6f, "");
+            force = CreateConfig(name, ForceName, 300f, "");
+            duration = CreateConfig(name, DurationName, 1f, "");
+            timeToAttack = CreateConfig(name, TimeToAttackName, 0.5f, "");
+            falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
         }
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> procCoefficient;
@@ -55,48 +66,131 @@ namespace Goobo13
         public static ConfigEntry<float> duration;
         public static ConfigEntry<float> timeToAttack;
         public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
     }
     public static class ThrowGrenadeConfig
     {
+        public const string name = ThrowGrenadeName;
         public static void Init()
         {
-            damageCoefficient = CreateConfig(ThrowGrenadeName, DamageCoefficientName, 3f, "");
-            force = CreateConfig(ThrowGrenadeName, ForceName, 300f, "");
-            duration = CreateConfig(ThrowGrenadeName, DurationName, 0.5f, "");
-            timeToAttack = CreateConfig(ThrowGrenadeName, TimeToAttackName, 0.25f, "");
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            force = CreateConfig(name, ForceName, 300f, "");
+            duration = CreateConfig(name, DurationName, 0.5f, "");
+            timeToAttack = CreateConfig(name, TimeToAttackName, 0.25f, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
         }
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> force;
         public static ConfigEntry<float> duration;
         public static ConfigEntry<float> timeToAttack;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
     }
     public static class DecoyConfig
     {
+        public const string name = DecoyName;
         public static void Init()
         {
-            duration = CreateConfig(DecoyName, "Cloak " + DurationName, 3f, "");
+            duration = CreateConfig(name, "Cloak " + DurationName, 3f, "");
+            lifetime = CreateConfig(name, LifetimeName, 30f, "");
         }
         public static ConfigEntry<float> duration;
+        public static ConfigEntry<float> lifetime;
     }
     public static class FireMinionsConfig
     {
+        public const string name = FireMinionsName;
         public static void Init()
         {
-            damageCoefficient = CreateConfig(FireMinionsName, DamageCoefficientName, 3f, "");
-            force = CreateConfig(FireMinionsName, ForceName, 100f, "");
-            timeToTarget = CreateConfig(FireMinionsName, "Time to Target", 0.25f, "");
-            timeToTarget.SettingChanged += TimeToTarget_SettingChanged;
-            TimeToTarget_SettingChanged(timeToTarget, null);
-        }
-
-        private static void TimeToTarget_SettingChanged(object sender, EventArgs e)
-        {
-            ProjectileImpactExplosion projectileImpactExplosion = Assets.GooboBall.GetComponent<ProjectileImpactExplosion>();
-            projectileImpactExplosion.lifetime = timeToTarget.Value;
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            force = CreateConfig(name, ForceName, 100f, "");
+            radius = CreateConfig(name, RadiusName, 3f, "");
+            timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
+            falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
         }
 
         public static ConfigEntry<float> damageCoefficient;
+        public static ConfigEntry<float> procCoefficient;
         public static ConfigEntry<float> force;
+        public static ConfigEntry<float> radius;
         public static ConfigEntry<float> timeToTarget;
+        public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
+    }
+    public static class GooboMissileConfig
+    {
+        public const string name = GooboMissileName;
+        public static void Init()
+        {
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            force = CreateConfig(name, ForceName, 100f, "");
+            distance = CreateConfig(name, DistanceName, 24f, "");
+            radius = CreateConfig(name, RadiusName, 3f, "");
+            duration = CreateConfig(name, DurationName, 0.25f, "");
+            timeToAttack = CreateConfig(name, TimeToAttackName, 0.25f, "");
+            timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
+            gooboAmount = CreateConfig(name, "Goobo Amount", 2, "");
+            falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
+        }
+
+        public static ConfigEntry<float> damageCoefficient;
+        public static ConfigEntry<float> procCoefficient;
+        public static ConfigEntry<float> force;
+        public static ConfigEntry<float> distance;
+        public static ConfigEntry<float> radius;
+        public static ConfigEntry<float> timeToAttack;
+        public static ConfigEntry<float> timeToTarget;
+        public static ConfigEntry<float> duration;
+        public static ConfigEntry<int> gooboAmount;
+        public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
+    }
+    public static class ConsumeMinionsConfig
+    {
+        public const string name = ConsumeMinionsName;
+        public static void Init()
+        {
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 5f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            radius = CreateConfig(name, RadiusName, 6f, "");
+            force = CreateConfig(name, ForceName, 300f, "");
+            duration = CreateConfig(name, DurationName, 1f, "");
+            timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
+            falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
+        }
+        public static ConfigEntry<float> damageCoefficient;
+        public static ConfigEntry<float> procCoefficient;
+        public static ConfigEntry<float> radius;
+        public static ConfigEntry<float> force;
+        public static ConfigEntry<float> duration;
+        public static ConfigEntry<float> timeToTarget;
+        public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
+    }
+    public static class UnstableDecoyConfig
+    {
+        public const string name = UnstableDecoyName;
+        public static void Init()
+        {
+            healthPercentage = CreateConfig(name, "Health Percentage to Take", 15f, "");
+            gooboAmount = CreateConfig(name, GooboAmountName, 2, "");
+            duration = CreateConfig(name, "Cloak " + DurationName, 1f, "");
+        }
+        public static ConfigEntry<float> healthPercentage;
+        public static ConfigEntry<int> gooboAmount;
+        public static ConfigEntry<float> duration;
     }
 }

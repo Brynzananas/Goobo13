@@ -4,6 +4,8 @@ using RiskOfOptions;
 using RiskOfOptions.Options;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Goobo13
@@ -52,7 +54,8 @@ namespace Goobo13
                 }
                 if (value is Enum)
                 {
-
+                    Enum @enum = value as Enum;
+                    if (@enum.GetType().GetCustomAttributes<FlagsAttribute>().Any()) return;
                     ModSettingsManager.AddOption(new ChoiceOption(config as ConfigEntry<T2>));
                 }
             }

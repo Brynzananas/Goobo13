@@ -1,4 +1,5 @@
 ﻿using R2API;
+using R2API.Networking.Interfaces;
 using RoR2;
 using RoR2.Orbs;
 using System;
@@ -93,7 +94,7 @@ namespace Goobo13
                 //{
                 //    position += (attackerBody.corePosition - position).normalized * (targetBody.bestFitRadius + 2f);
                 //}
-                Utils.SpawnGoobo(attackerMaster, position, Quaternion.identity);
+                Utils.SpawnGooboClone(attackerMaster, position, Quaternion.identity);
             }
         }
     }
@@ -112,10 +113,7 @@ namespace Goobo13
             if (!skillLocator) return;
             GenericSkill genericSkill = skillLocator.primary;
             if (!genericSkill) return;
-            if (!characterBody.HasBuff(Assets.GooboConsumptionCharge))
-            {
-                genericSkill.SetSkillOverride(characterBody.gameObject, Assets.GooboSlam, GenericSkill.SkillOverridePriority.Contextual);
-            }
+            if (!characterBody.HasBuff(Assets.GooboConsumptionCharge)) new AddSlamSkillOverride(characterBody.netId).Send(R2API.Networking.NetworkDestination.Clients);
             characterBody.AddBuff(Assets.GooboConsumptionCharge);
         }
         public override void Begin()

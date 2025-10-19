@@ -35,7 +35,9 @@ namespace Goobo13
         public static GooboRandomGrenadeSkillDef GooboGrenade;
         public static SkillDef GooboMissile;
         public static SkillDef CloneWalk;
+        public static SkillDef UnstableCloneWalk;
         public static GooboThrowGooboMinionsSkillDef CorrosiveDogpile;
+        public static GooboSkillDef GooboConsumption;
         public static SkillFamily Passive;
         public static SkillFamily Primary;
         public static SkillFamily Secondary;
@@ -102,12 +104,17 @@ namespace Goobo13
             GooboOrb = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboOrb.prefab").RegisterEffect();
             GooboJuxtapose = assetBundle.LoadAsset<PassiveItemSkillDef>("Assets/Goobo13/Skills/GooboJuxtapose.asset").RegisterSkillDef();
             GooboPunch = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/GooboPunch.asset").RegisterSkillDef();
+            GooboSlam = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboSlam.asset").RegisterSkillDef();
             GooboGrenade = assetBundle.LoadAsset<GooboRandomGrenadeSkillDef>("Assets/Goobo13/Skills/GooboGrenade.asset").RegisterSkillDef();
             GooboMissile = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboMissile.asset").RegisterSkillDef();
             CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/CloneWalk.asset").RegisterSkillDef();
+            UnstableCloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/UnstableCloneWalk.asset").RegisterSkillDef();
             CorrosiveDogpile = assetBundle.LoadAsset<GooboThrowGooboMinionsSkillDef>("Assets/Goobo13/Skills/CorrosiveDogpile.asset").RegisterSkillDef();
+            GooboConsumption = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveConsumption.asset").RegisterSkillDef();
             GooboJuxtaposePassive = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/GooboJuxtaposePassive.asset").RegisterItemDef();
             GooboCorrosion = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboCorrosion.asset").RegisterBuffDef();
+            GooboCorrosionCharge = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboCorrosionCharge.asset").RegisterBuffDef();
+            GooboConsumptionCharge = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboConsumptionCharge.asset").RegisterBuffDef();
             Passive = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Passive.asset").RegisterSkillFamily();
             Primary = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Primary.asset").RegisterSkillFamily();
             Secondary = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Secondary.asset").RegisterSkillFamily();
@@ -116,8 +123,9 @@ namespace Goobo13
             GooboCorrosionDot = Utils.CreateDOT(GooboCorrosion, out GooboCorrosionDotIndex, true, 1f, 1f, DamageColorIndex.DeathMark, null);
             GooboDeployableSlot = DeployableAPI.RegisterDeployableSlot(GetGobooDeployableSlot);
             OrbAPI.AddOrb<GooboOrb>();
+            OrbAPI.AddOrb<GooboConsumeOrb>();
             ContentManager.collectContentPackProviders += (addContentPackProvider) => addContentPackProvider(new Content());
         }
-        public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => SummonGoobosConfig.maxAmount.Value;
+        public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => self.inventory && self.inventory.GetItemCount(GooboJuxtaposePassive) > 0 ? SummonGoobosConfig.maxAmount.Value : 0;
     }
 }

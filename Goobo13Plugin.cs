@@ -18,6 +18,7 @@ namespace Goobo13
     [BepInDependency(R2API.DeployableAPI.PluginGUID, R2API.DeployableAPI.PluginVersion)]
     [BepInDependency(R2API.DotAPI.PluginGUID, R2API.DotAPI.PluginVersion)]
     [BepInDependency(R2API.OrbAPI.PluginGUID, R2API.OrbAPI.PluginVersion)]
+    [BepInDependency(R2API.Networking.NetworkingAPI.PluginGUID, R2API.Networking.NetworkingAPI.PluginVersion)]
     [BepInDependency(ModCompatabilities.RiskOfOptionsCompatability.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(ModCompatabilities.EmoteCompatability.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.EveryoneNeedSameModVersion)]
@@ -44,6 +45,9 @@ namespace Goobo13
             ThrowGrenadeConfig.Init();
             DecoyConfig.Init();
             FireMinionsConfig.Init();
+            GooboMissileConfig.Init();
+            ConsumeMinionsConfig.Init();
+            UnstableDecoyConfig.Init();
             Hooks.SetHooks();
         }
         public void OnDestroy()

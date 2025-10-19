@@ -43,11 +43,11 @@ namespace Goobo13
             Inventory attackerInventory = attackerBody?.inventory;
             if (attackerBody)
             {
-                if (damageInfo.HasModdedDamageType(Assets.GooboCorrosionDamageType))
+                int chargeCount = attackerBody.GetBuffCount(Assets.GooboCorrosionCharge);
+                if (chargeCount > 0 || damageInfo.HasModdedDamageType(Assets.GooboCorrosionDamageType))
                 {
-                    int buffCount = victimBody.GetBuffCount(Assets.GooboCorrosion);
-                    int chargeCount = attackerBody.GetBuffCount(Assets.GooboCorrosionCharge);
                     if (chargeCount < 1) chargeCount = 1;
+                    int buffCount = victimBody.GetBuffCount(Assets.GooboCorrosion);
                     if (buffCount < gooboBuffMaxStacks)
                     {
                         InflictDotInfo dotInfo = new InflictDotInfo()
@@ -69,7 +69,7 @@ namespace Goobo13
                     if (Util.CheckRoll(GooboChanceSpawn * damageInfo.procCoefficient, luck))
                     {
                         Vector3 vector3 = Utils.GetClosestNodePosition(damageInfo.position, HullClassification.Human, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : damageInfo.position;
-                        CharacterMaster decoyMaster = Utils.SpawnGoobo(obj.attackerMaster, vector3, Quaternion.identity);
+                        CharacterMaster decoyMaster = Utils.SpawnGooboClone(obj.attackerMaster, vector3, Quaternion.identity);
                     }
                 }
             }
