@@ -136,7 +136,7 @@ namespace Goobo13
             duration = CreateConfig(name, DurationName, 0.25f, "");
             timeToAttack = CreateConfig(name, TimeToAttackName, 0.25f, "");
             timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
-            gooboAmount = CreateConfig(name, "Goobo Amount", 2, "");
+            gooboAmount = CreateConfig(name, "Goobo Amount", 1, "");
             falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
             damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
             damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
@@ -160,9 +160,10 @@ namespace Goobo13
         public const string name = ConsumeMinionsName;
         public static void Init()
         {
+            healPercentage = CreateConfig(name, "Health Percentage to Heal", 5f, "");
             damageCoefficient = CreateConfig(name, DamageCoefficientName, 5f, "");
             procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
-            radius = CreateConfig(name, RadiusName, 6f, "");
+            radius = CreateConfig(name, RadiusName, 9f, "");
             force = CreateConfig(name, ForceName, 300f, "");
             duration = CreateConfig(name, DurationName, 1f, "");
             timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
@@ -170,6 +171,7 @@ namespace Goobo13
             damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
             damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
         }
+        public static ConfigEntry<float> healPercentage;
         public static ConfigEntry<float> damageCoefficient;
         public static ConfigEntry<float> procCoefficient;
         public static ConfigEntry<float> radius;
@@ -186,10 +188,12 @@ namespace Goobo13
         public static void Init()
         {
             healthPercentage = CreateConfig(name, "Health Percentage to Take", 15f, "");
+            healthPercentageRandomSpread = CreateConfig(name, "Health Percentage to Take Random Spread", 10f, "");
             gooboAmount = CreateConfig(name, GooboAmountName, 2, "");
-            duration = CreateConfig(name, "Cloak " + DurationName, 1f, "");
+            duration = CreateConfig(name, "Immunity " + DurationName, 1f, "");
         }
         public static ConfigEntry<float> healthPercentage;
+        public static ConfigEntry<float> healthPercentageRandomSpread;
         public static ConfigEntry<int> gooboAmount;
         public static ConfigEntry<float> duration;
     }

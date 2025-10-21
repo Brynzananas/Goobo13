@@ -4,6 +4,7 @@ using MonoMod.RuntimeDetour;
 using R2API;
 using RoR2;
 using RoR2.Audio;
+using RoR2.CameraModes;
 using RoR2.CharacterAI;
 using RoR2.Orbs;
 using RoR2.Projectile;
@@ -15,6 +16,8 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.StyleSheets;
+using static RoR2.CameraRigController;
+using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace Goobo13
 {
@@ -301,7 +304,6 @@ namespace Goobo13
             {
                 DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
                 if (currentGrenade == Assets.GooboGrenadeType1Projectile) damageTypeCombo.AddModdedDamageType(Assets.GooboCorrosionDamageType); // This is stupid
-                characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 1);
                 FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
                 {
                     projectilePrefab = currentGrenade,
@@ -390,7 +392,7 @@ namespace Goobo13
         }
         public void ConvertMinionsToProjectiles()
         {
-            GooboThrowGooboMinionsSkillDef.InstanceData instanceData = activatorSkillSlot == null || activatorSkillSlot.skillInstanceData == null ? null : activatorSkillSlot.skillInstanceData as GooboThrowGooboMinionsSkillDef.InstanceData;
+            GooboSkillDef.InstanceData instanceData = activatorSkillSlot == null || activatorSkillSlot.skillInstanceData == null ? null : activatorSkillSlot.skillInstanceData as GooboSkillDef.InstanceData;
             if (instanceData == null) return;
             GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = instanceData.gobooThrowGooboMinionsTracker;
             if (!gobooThrowGooboMinionsTracker) return;
@@ -689,6 +691,91 @@ namespace Goobo13
             return InterruptPriority.PrioritySkill;
         }
     }
+    public class GooboMissile : BaseGooboState
+    {
+        public static float damageCoefficient => GooboMissileConfig.damageCoefficient.Value;
+        public static float procCoefficient => GooboMissileConfig.procCoefficient.Value;
+        public static float force => GooboMissileConfig.force.Value;
+        public static int baseGooboAmount => GooboMissileConfig.gooboAmount.Value;
+        public static float baseArrivalTime => GooboMissileConfig.timeToTarget.Value;
+        public static float baseDuration => GooboMissileConfig.duration.Value;
+        public static float baseTimeToAttack => GooboMissileConfig.timeToAttack.Value;
+        public static float radius => GooboMissileConfig.radius.Value;
+        public static BlastAttack.FalloffModel falloffModel => GooboMissileConfig.falloffModel.Value;
+        public static DamageType damageType => GooboMissileConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => GooboMissileConfig.damageTypeExtended.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
+        public float arrivalTime;
+        public float upTransitionSpeed;
+        public float downTransitionSpeed;
+        public float timeToThrow;
+        public float duration;
+        private bool fired;
+        public HurtBox hurtboxTarget;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            StartAimMode();
+            SetValues();
+            PlayCrossfade("UpperBody, Override", "ThrowUp", "UpperBody.playbackRate", timeToThrow, upTransitionSpeed);
+            if (NetworkServer.active) FindTarget();
+        }
+        public void Fire(Ray ray)
+        {
+            PlayAnimation("UpperBody, Override", "ThrowDown", "UpperBody.playbackRate", duration - timeToThrow, downTransitionSpeed);
+            if (NetworkServer.active)
+            {
+                DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
+                GooboOrb gooboOrb = new GooboOrb
+                {
+                    attacker = gameObject,
+                    duration = arrivalTime,
+                    gooboAmount = baseGooboAmount,
+                    damage = characterBody.damage * damageCoefficient,
+                    procCoefficient = procCoefficient,
+                    crit = RollCrit(),
+                    falloffModel = falloffModel,
+                    force = force,
+                    damageTypeCombo = damageTypeCombo,
+                    origin = characterBody.aimOrigin,
+                    radius = radius,
+                    teamIndex = GetTeam(),
+                    target = hurtboxTarget,
+                    visualPrefab = Assets.GooboOrb.prefab
+                };
+                OrbManager.instance.AddOrb(gooboOrb);
+            }
+            fired = true;
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!fired && fixedAge >= timeToThrow) Fire(GetAimRay());
+            if (!isAuthority) return;
+            if (fixedAge >= duration) outer.SetNextStateToMain();
+        }
+        public void SetValues()
+        {
+            timeToThrow = baseTimeToAttack / characterBody.attackSpeed;
+            duration = baseDuration / characterBody.attackSpeed;
+            upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
+            downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
+            arrivalTime = baseArrivalTime / characterBody.attackSpeed;
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.PrioritySkill;
+        }
+        public void FindTarget()
+        {
+            GooboSkillDef.InstanceData instanceData = activatorSkillSlot == null || activatorSkillSlot.skillInstanceData == null ? null : activatorSkillSlot.skillInstanceData as GooboSkillDef.InstanceData;
+            if (instanceData == null) return;
+            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = instanceData.gobooThrowGooboMinionsTracker;
+            if (!gobooThrowGooboMinionsTracker) return;
+            hurtboxTarget = gobooThrowGooboMinionsTracker.trackingTarget;
+        }
+    }
     public class ConsumeMinions : BaseState
     {
         public static float arrivalTime => ConsumeMinionsConfig.timeToTarget.Value;
@@ -758,6 +845,7 @@ namespace Goobo13
         public float pushAwayForce;
         private bool fired;
         private bool fired2;
+        private int buffCount;
         public override void OnEnter()
         {
             base.OnEnter();
@@ -792,7 +880,7 @@ namespace Goobo13
                 {
                     if (NetworkServer.active)
                     {
-                        int buffCount = characterBody.GetBuffCount(Assets.GooboConsumptionCharge);
+                        buffCount = characterBody.GetBuffCount(Assets.GooboConsumptionCharge);
                         characterBody.SetBuffCount(Assets.GooboConsumptionCharge.buffIndex, 0);
                         characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, buffCount);
                     }
@@ -832,20 +920,28 @@ namespace Goobo13
         public override void OnExit()
         {
             base.OnExit();
-            if (fired2) PlayCrossfade("UpperBody, Override", "SlamTransition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
-            if (activatorSkillSlot) activatorSkillSlot.UnsetSkillOverride(gameObject, Assets.GooboSlam, GenericSkill.SkillOverridePriority.Contextual);
-            if (NetworkServer.active) characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 0);
+            if (fired2)
+            {
+                PlayCrossfade("UpperBody, Override", "SlamTransition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+                if (activatorSkillSlot) activatorSkillSlot.UnsetSkillOverride(gameObject, Assets.GooboSlam, GenericSkill.SkillOverridePriority.Contextual);
+                if (NetworkServer.active) characterBody.SetBuffCount(Assets.GooboCorrosionCharge.buffIndex, 0);
+            }
+            else
+            {
+                if (NetworkServer.active) characterBody.SetBuffCount(Assets.GooboConsumptionCharge.buffIndex, buffCount);
+            }
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {
-            return InterruptPriority.Skill;
+            return InterruptPriority.PrioritySkill;
         }
     }
     public class UnstableDecoy : BaseState
     {
         public static float healthPercentage => UnstableDecoyConfig.healthPercentage.Value;
+        public static float healthPercentageRandomSpread => UnstableDecoyConfig.healthPercentageRandomSpread.Value;
         public static int gooboAmount => UnstableDecoyConfig.gooboAmount.Value;
-        public static float cloakDuration => UnstableDecoyConfig.duration.Value;
+        public static float immunityDuration => UnstableDecoyConfig.duration.Value;
         public override void OnEnter()
         {
             base.OnEnter();
@@ -854,13 +950,15 @@ namespace Goobo13
                 //Vector3 vector3 = Utils.GetClosestNodePosition(characterBody.footPosition, characterBody.hullClassification, float.PositiveInfinity, out Vector3 nodePosition) ? nodePosition : characterBody.footPosition;
                 Vector3 directionVector = characterDirection ? characterDirection.forward : transform.forward;
                 for (int i = 0; i < gooboAmount; i++) Utils.SpawnGooboClone(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
-                characterBody.AddTimedBuff(RoR2Content.Buffs.Cloak, cloakDuration);
-                characterBody.AddTimedBuff(RoR2Content.Buffs.CloakSpeed, cloakDuration);
                 if (healthComponent && healthPercentage > 0f)
                 {
+                    float percentage = healthPercentage;
+                    float spread = UnityEngine.Random.Range(0f, healthPercentageRandomSpread);
+                    percentage += spread * (Util.CheckRoll(50f) ? 1f : -1f);
+                    percentage /= 100f;
                     DamageInfo damageInfo = new DamageInfo
                     {
-                        damage = healthComponent.combinedHealth * healthPercentage,
+                        damage = healthComponent.combinedHealth * percentage,
                         position = characterBody.corePosition,
                         force = Vector3.zero,
                         damageColorIndex = DamageColorIndex.Default,
@@ -873,6 +971,8 @@ namespace Goobo13
                     };
                     healthComponent.TakeDamage(damageInfo);
                 }
+                characterBody.AddTimedBuff(RoR2Content.Buffs.Immune, immunityDuration);
+                characterBody.AddTimedBuff(RoR2Content.Buffs.CloakSpeed, immunityDuration);
             }
             if (!isAuthority) return;
             outer.SetNextStateToMain();
@@ -880,6 +980,273 @@ namespace Goobo13
         public override InterruptPriority GetMinimumInterruptPriority()
         {
             return InterruptPriority.PrioritySkill;
+        }
+    }
+    public class FireSpout : BaseState
+    {
+        public static float damageCoefficient = 2.75f;
+        public static float procCoefficient = 1f;
+        public static float baseDuration = 0.5f;
+        public static float force = 0f;
+        public float duration;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            duration = baseDuration / characterBody.attackSpeed;
+            Fire(GetAimRay());
+        }
+        public void Fire(Ray ray)
+        {
+            if (isAuthority)
+            {
+                DamageTypeCombo damageTypeCombo = new DamageTypeCombo(DamageType.Generic, DamageTypeExtended.Generic, DamageSource.Primary);
+                damageTypeCombo.AddModdedDamageType(Assets.AbysstouchedDamageType);
+                FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
+                {
+                    projectilePrefab = Assets.RevolutionarySanguineVapor,
+                    position = ray.origin,
+                    rotation = Util.QuaternionSafeLookRotation(ray.direction),
+                    owner = gameObject,
+                    damage = characterBody.damage * damageCoefficient,
+                    force = force,
+                    crit = RollCrit(),
+                    damageTypeOverride = new DamageTypeCombo?(damageTypeCombo),
+                };
+                ProjectileManager.instance.FireProjectile(fireProjectileInfo);
+            }
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!isAuthority) return;
+            if (fixedAge >= duration) outer.SetNextStateToMain();
+        }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.Skill;
+        }
+    }
+    public class TeleportBehind : BaseState, ICameraStateProvider
+    {
+        public Quaternion newRotation;
+        public void GetCameraState(CameraRigController cameraRigController, ref CameraState cameraState)
+        {
+            cameraState.rotation = newRotation;
+        }
+
+        public bool IsHudAllowed(CameraRigController cameraRigController) => true;
+
+        public bool IsUserControlAllowed(CameraRigController cameraRigController) => true;
+
+        public bool IsUserLookAllowed(CameraRigController cameraRigController) => true;
+
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            if (isAuthority) outer.SetNextStateToMain();
+            if (!NetworkServer.active) return;
+            RevolutionaryController revolutionaryController = GetComponent<RevolutionaryController>();
+            if (revolutionaryController.currentTarget)
+            {
+                CharacterDirection targetDirection = revolutionaryController.currentTarget.characterDirection;
+                Vector3 look = targetDirection ? targetDirection.forward : revolutionaryController.currentTarget.transform.forward;
+                look *= -1f;
+                look.y = 0f;
+                look.Normalize();
+                EffectData effectData = new EffectData
+                {
+                    origin = characterBody.corePosition,
+                    scale = characterBody.radius
+                };
+                EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                Vector3 newPosition = revolutionaryController.currentTarget.corePosition + revolutionaryController.currentTarget.radius * look + characterBody.radius * look;
+                float height = 1f;
+                if (characterMotor)
+                {
+                    height = characterMotor.capsuleHeight;
+                }
+                if (Physics.Raycast(Vector3.down, newPosition, out RaycastHit hitInfo, height * 2f, LayerIndex.world.mask))
+                {
+                    newPosition = hitInfo.point;
+                }
+                Vector3 vector3 = (revolutionaryController.currentTarget.corePosition - newPosition).normalized;
+                newRotation = Quaternion.LookRotation(vector3);
+                foreach (CameraRigController cameraRigController in CameraRigController.readOnlyInstancesList)
+                {
+                    //cameraRigController.transform.rotation = newRotation;
+                    cameraRigController.SetOverrideCam(this, 0f);
+                    cameraRigController.LateUpdate();
+                    cameraRigController.SetOverrideCam(null, 0f);
+                }
+                if (characterDirection)
+                {
+                    characterDirection.forward = vector3;
+                    characterDirection.moveVector = vector3;
+                }
+                if (characterMotor)
+                {
+                    characterMotor.Motor.SetPosition(newPosition);
+                }
+                else if (rigidbody)
+                {
+                    rigidbody.position = newPosition;
+                }
+                Inventory inventory = characterBody.inventory;
+                EffectData effectData2 = new EffectData
+                {
+                    origin = newPosition,
+                    scale = characterBody.radius
+                };
+                EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData2, true);
+                if (inventory && inventory.GetItemCount(Assets.ImpStack) > 0)
+                {
+                    Utils.SpawnGooboClone(characterBody.master, newPosition, Quaternion.LookRotation(vector3));
+                    inventory.RemoveItem(Assets.ImpStack);
+                }
+            }
+        }
+    }
+    public class TeleportForward : BaseState
+    {
+        public static float damageCoefficient = 2.7f;
+        public static float force = 100f;
+        public static float distance = 24f;
+        public static int spikesCount = 3;
+        public static float minSpread = 0f;
+        public static float maxSpread = 35f;
+        public static float pitchScale = 1f;
+        public static float yawScale = 1f;
+        private bool crit;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            if (NetworkServer.active)
+            {
+                EffectData effectData = new EffectData
+                {
+                    origin = characterBody.corePosition,
+                    scale = characterBody.radius
+                };
+                EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+                Inventory inventory = characterBody.inventory;
+                if (inventory && inventory.GetItemCount(Assets.ImpStack) > 0)
+                {
+                    Vector3 directionVector = characterDirection ? characterDirection.forward : transform.forward;
+                    Utils.SpawnGooboClone(characterBody.master, transform.position, Quaternion.LookRotation(directionVector));
+                    inventory.RemoveItem(Assets.ImpStack);
+                }
+            }
+            if (!isAuthority) return;
+            Ray ray = GetAimRay();
+            Vector3 oldPosition = characterBody.corePosition;
+            Vector3 finalPosition;
+            if (Physics.Raycast(ray, out RaycastHit hitInfo, distance, LayerIndex.world.mask))
+            {
+                finalPosition = hitInfo.point;
+            }
+            else
+            {
+                finalPosition = ray.origin + ray.direction * distance;
+            }
+            if (characterMotor)
+            {
+                characterMotor.Motor.SetPosition(finalPosition);
+            }
+            else if (rigidbody)
+            {
+                rigidbody.position = finalPosition;
+            }
+            EffectData effectData2 = new EffectData
+            {
+                origin = finalPosition,
+                scale = characterBody.radius
+            };
+            crit = RollCrit();
+            EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData2, true);
+            for (int i = 0; i < spikesCount; i++)
+            {
+                Vector3 direction = Quaternion.AngleAxis(-90f, Vector3.right) * Util.ApplySpread(transform.forward, minSpread, maxSpread, yawScale, pitchScale);
+                Ray ray1 = new Ray(finalPosition, direction);
+                Fire(ray1);
+            }
+            if (characterDirection)
+            {
+                Vector3 direction = (finalPosition - oldPosition);
+                direction.y = 0f;
+                direction.Normalize();
+                characterDirection.forward = direction;
+                characterDirection.moveVector = direction;
+            }
+            outer.SetNextStateToMain();
+        }
+        public void Fire(Ray ray)
+        {
+            if (isAuthority)
+            {
+                DamageTypeCombo damageTypeCombo = new DamageTypeCombo(DamageType.Generic, DamageTypeExtended.Generic, DamageSource.Utility);
+                FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
+                {
+                    projectilePrefab = Assets.RevolutionaryAbyssalSpike,
+                    position = ray.origin,
+                    rotation = Util.QuaternionSafeLookRotation(ray.direction),
+                    owner = gameObject,
+                    damage = characterBody.damage * damageCoefficient,
+                    force = force,
+                    crit = crit,
+                    damageTypeOverride = new DamageTypeCombo?(damageTypeCombo),
+                };
+                ProjectileManager.instance.FireProjectile(fireProjectileInfo);
+            }
+        }
+    }
+    public class EnterDimension : BaseState
+    {
+        public static float distance = 24f;
+        public static float baseDuration = 8f;
+        public List<CharacterBody> characterBodies = [];
+        public GameObject pp;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            EffectData effectData = new EffectData
+            {
+                origin = characterBody.corePosition,
+                scale = distance
+            };
+            EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, false);
+            if (NetworkServer.active)
+            {
+                float sqrDistance = distance * distance;
+                foreach (CharacterBody characterBody in CharacterBody.readOnlyInstancesList)
+                {
+                    Vector3 vector3 = characterBody.corePosition - this.characterBody.corePosition;
+                    if (vector3.sqrMagnitude > sqrDistance) continue;
+                    characterBodies.Add(characterBody);
+                    characterBody.AddBuff(Assets.InBetweenSpace);
+                }
+            }
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!isAuthority) return;
+            if (fixedAge >= baseDuration) outer.SetNextStateToMain();
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            EffectData effectData = new EffectData
+            {
+                origin = characterBody.corePosition,
+                scale = distance
+            };
+            EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, false);
+            if (NetworkServer.active)
+            foreach (CharacterBody characterBody in characterBodies)
+            {
+                if (!characterBody) continue;
+                characterBody.RemoveBuff(Assets.InBetweenSpace);
+            }
         }
     }
 }

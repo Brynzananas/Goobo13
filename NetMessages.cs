@@ -11,6 +11,10 @@ namespace Goobo13
     public class AddSlamSkillOverride : INetMessage
     {
         public NetworkInstanceId instanceId;
+        public AddSlamSkillOverride()
+        {
+
+        }
         public AddSlamSkillOverride(NetworkInstanceId networkInstanceId)
         {
             this.instanceId = networkInstanceId;
@@ -19,7 +23,6 @@ namespace Goobo13
         {
             reader.ReadNetworkId();
         }
-
         public void OnReceived()
         {
             GameObject gameObject = Util.FindNetworkObject(instanceId);
@@ -32,7 +35,6 @@ namespace Goobo13
             if (!genericSkill) return;
             genericSkill.SetSkillOverride(characterBody.gameObject, Assets.GooboSlam, GenericSkill.SkillOverridePriority.Contextual);
         }
-
         public void Serialize(NetworkWriter writer)
         {
             writer.Write(instanceId);

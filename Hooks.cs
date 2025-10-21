@@ -1,4 +1,7 @@
-﻿using R2API;
+﻿using Mono.Cecil.Cil;
+using MonoMod.Cil;
+using R2API;
+using R2API.Utils;
 using RoR2;
 using RoR2.CharacterAI;
 using System;
@@ -21,8 +24,127 @@ namespace Goobo13
             On.RoR2.CharacterAI.BaseAI.OnBodyStart += BaseAI_OnBodyStart;
             On.RoR2.CharacterAI.BaseAI.OnBodyLost += BaseAI_OnBodyLost;
             GlobalEventManager.onServerDamageDealt += GlobalEventManager_onServerDamageDealt;
+            GlobalEventManager.onCharacterDeathGlobal += GlobalEventManager_onCharacterDeathGlobal;
             On.RoR2.BodyCatalog.SetBodyPrefabs += BodyCatalog_SetBodyPrefabs;
+            On.RoR2.CharacterBody.GetVisibilityLevel_CharacterBody += CharacterBody_GetVisibilityLevel_CharacterBody;
+            On.RoR2.CharacterBody.OnClientBuffsChanged += CharacterBody_OnClientBuffsChanged;
+            IL.RoR2.CharacterModel.UpdateForCamera += CharacterModel_UpdateForCamera;
+            On.RoR2.HealthComponent.TakeDamageProcess += HealthComponent_TakeDamageProcess;
+            //On.RoR2.CharacterAI.BaseAI.ManagedFixedUpdate += BaseAI_ManagedFixedUpdate;
+            RoR2Application.onLoadFinished += OnRoR2Loaded;
             hooksSet = true;
+        }
+
+        private static void OnRoR2Loaded()
+        {
+            pp = GameObject.Instantiate(Assets.BetweenSpacesPP);
+            GameObject.DontDestroyOnLoad(pp);
+            pp.SetActive(false);
+        }
+
+        private static void BaseAI_ManagedFixedUpdate(On.RoR2.CharacterAI.BaseAI.orig_ManagedFixedUpdate orig, BaseAI self, float deltaTime)
+        {
+            orig(self, deltaTime);
+            if (!self.body || self.currentEnemy == null) return;
+            CharacterBody enemyBody = self.currentEnemy.characterBody;
+            if (!enemyBody) return;
+            if (enemyBody.GetVisibilityLevel(self.body) >= VisibilityLevel.Revealed) return;
+            Debug.Log("isInvisible");
+            self.currentEnemy = null;
+        }
+
+        private static void HealthComponent_TakeDamageProcess(On.RoR2.HealthComponent.orig_TakeDamageProcess orig, HealthComponent self, DamageInfo damageInfo)
+        {
+            if (self.body && damageInfo.attacker)
+            {
+                CharacterBody attackerBody = damageInfo.attacker.GetComponent<CharacterBody>();
+                if (attackerBody)
+                {
+                    bool attackerHasBuff = attackerBody.HasBuff(Assets.InBetweenSpace);
+                    bool selfHasBuff = self.body.HasBuff(Assets.InBetweenSpace);
+                    if (attackerHasBuff ^ selfHasBuff) return;
+                }
+            }
+            orig(self, damageInfo);
+        }
+
+        private static void CharacterModel_UpdateForCamera(MonoMod.Cil.ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+            if (c.TryGotoNext(MoveType.Before,
+                    x => x.MatchLdarg(0),
+                    x => x.MatchLdfld<CharacterModel>(nameof(CharacterModel.body)),
+                    x => x.MatchLdarg(1),
+                    x => x.MatchCallvirt(typeof(CameraRigController).GetPropertyGetter("targetTeamIndex")),
+                    x => x.MatchCallvirt<CharacterBody>(nameof(CharacterBody.GetVisibilityLevel))
+                ))
+            {
+                Instruction instruction = c.Next;
+                Instruction instruction2 = c.Next.Next.Next.Next.Next.Next;
+                c.Emit(OpCodes.Ldarg_1);
+                c.EmitDelegate(NullCheck);
+                bool NullCheck(CameraRigController cameraRigController) => cameraRigController.targetBody;
+                c.Emit(OpCodes.Brfalse_S, instruction);
+                c.Emit(OpCodes.Ldarg_0);
+                c.Emit(OpCodes.Ldarg_1);
+                c.EmitDelegate(GetIt);
+                VisibilityLevel GetIt(CharacterModel characterModel, CameraRigController cameraRigController) => characterModel.body.GetVisibilityLevel(cameraRigController.targetBody);
+                c.Emit(OpCodes.Br_S, instruction2);
+            }
+            else
+            {
+                Debug.LogError(il.Method.Name + " IL Hook failed!");
+            }
+        }
+
+        private static void CharacterBody_OnClientBuffsChanged(On.RoR2.CharacterBody.orig_OnClientBuffsChanged orig, CharacterBody self)
+        {
+            orig(self);
+            if (self.HasBuff(Assets.InBetweenSpace))
+            {
+                if (!pp.activeSelf) pp.SetActive(true);
+            }
+            else
+            {
+                if (pp.activeSelf) pp.SetActive(false);
+            }
+
+        }
+
+        private static VisibilityLevel CharacterBody_GetVisibilityLevel_CharacterBody(On.RoR2.CharacterBody.orig_GetVisibilityLevel_CharacterBody orig, CharacterBody self, CharacterBody observer)
+        {
+            bool observerHasBuff = observer.HasBuff(Assets.InBetweenSpace);
+            bool selfHasBuff = self.HasBuff(Assets.InBetweenSpace);
+            if (observerHasBuff ^ selfHasBuff) return VisibilityLevel.Invisible;
+            return orig(self, observer);
+        }
+
+        public static int maxImpStacks = 8;
+        private static void GlobalEventManager_onCharacterDeathGlobal(DamageReport obj)
+        {
+            CharacterBody attackerBody = obj.attackerBody;
+            CharacterMaster victimMaster = obj.victimMaster;
+            Inventory victimInventory = victimMaster?.inventory;
+            Inventory attackerInventory = attackerBody?.inventory;
+            if (attackerBody)
+            {
+                if (victimInventory && attackerInventory)
+                {
+                    int impStacks = victimInventory.GetItemCount(Assets.ImpStack);
+                    if (impStacks > 0)
+                    {
+                        victimInventory.RemoveItem(Assets.ImpStack, impStacks);
+                        int attackerImpStacks = attackerInventory.GetItemCount(Assets.ImpStack);
+                        if (attackerImpStacks + impStacks > maxImpStacks)
+                        {
+                            impStacks -= maxImpStacks - attackerImpStacks;
+                            if (impStacks <= 0) return;
+                        }
+                        attackerInventory.GiveItem(Assets.ImpStack, impStacks);
+                    }
+                }
+            }
+           
         }
 
         private static void BodyCatalog_SetBodyPrefabs(On.RoR2.BodyCatalog.orig_SetBodyPrefabs orig, GameObject[] newBodyPrefabs)
@@ -72,6 +194,11 @@ namespace Goobo13
                         CharacterMaster decoyMaster = Utils.SpawnGooboClone(obj.attackerMaster, vector3, Quaternion.identity);
                     }
                 }
+                if (damageInfo.HasModdedDamageType(Assets.AbysstouchedDamageType))
+                {
+                    RevolutionaryController revolutionaryController = attackerBody.GetComponent<RevolutionaryController>();
+                    if (revolutionaryController != null) revolutionaryController.currentTarget = victimBody;
+                }
             }
         }
 
@@ -114,9 +241,12 @@ namespace Goobo13
 
         public static List<CharacterBody> goobs = [];
         public static int gooboBuffMaxStacks = 30;
+        public static int gooboConsumptionBuffMaxStacks = 10;
+        public static GameObject pp;
         private static void CharacterBody_SetBuffCount(On.RoR2.CharacterBody.orig_SetBuffCount orig, CharacterBody self, BuffIndex buffType, int newCount)
         {
             if (buffType == Assets.GooboCorrosion.buffIndex) if (newCount > gooboBuffMaxStacks) newCount = gooboBuffMaxStacks;
+            if (buffType == Assets.GooboConsumptionCharge.buffIndex) if (newCount > gooboConsumptionBuffMaxStacks) newCount = gooboConsumptionBuffMaxStacks;
             /*if (self.bodyIndex == Assets.DemolisherBodyIndex && buffType == Assets.GooboCorrosion.buffIndex)
             {
                 int buffs = 0;

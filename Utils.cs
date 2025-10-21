@@ -89,6 +89,41 @@ namespace Goobo13
             }
             return gooboMaster;
         }
+        public static bool GetRandomNodePosition(out Vector3 nodePosition)
+        {
+            NodeGraph groundNodes = SceneInfo.instance.groundNodes;
+            List<NodeGraph.NodeIndex> nodeIndices = groundNodes.GetActiveNodesForHullMask(HullMask.Human);
+            NodeGraph.NodeIndex nodeIndex = nodeIndices[UnityEngine.Random.Range(0, nodeIndices.Count)];
+            if (groundNodes.GetNodePosition(nodeIndex, out nodePosition))
+            {
+                return true;
+            }
+            else
+            {
+                nodePosition = Vector3.zero;
+                return false;
+            }
+        }
+        public static CharacterMaster SpawnEvilGooboClone(Vector3 position, Quaternion rotation)
+        {
+            CharacterMaster gooboMaster = new MasterSummon
+            {
+                position = position,
+                ignoreTeamMemberLimit = true,
+                masterPrefab = Assets.Goobo13CloneMaster,
+                summonerBodyObject = null,
+                teamIndexOverride = TeamIndex.Monster,
+                rotation = rotation,
+            }.Perform();
+            if (gooboMaster)
+            {
+                if (gooboMaster.inventory)
+                {
+                    gooboMaster.inventory.GiveItem(Assets.ImpStack);
+                }
+            }
+            return gooboMaster;
+        }
         public static float gooboGummyNoCollisionTime = 2.5f;
         public static CharacterMaster SpawnGoobo(CharacterMaster characterMaster, Vector3 position, Quaternion rotation)
         {

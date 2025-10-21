@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.UIElements;
 using static UnityEngine.ParticleSystem.PlaybackState;
 
@@ -18,7 +19,7 @@ namespace Goobo13
 {
     public class GobooThrowGooboMinionsTracker : MonoBehaviour
     {
-        public GooboThrowGooboMinionsSkillDef.InstanceData instanceData;
+        public int activeCount;
         public static GameObject trackingPrefab;
         public float maxTrackingDistance = 48f;
         public float maxTrackingAngle = 45f;
@@ -58,13 +59,11 @@ namespace Goobo13
         }
         public void MyFixedUpdate(float deltaTime)
         {
-            if (instanceData != null && instanceData.genericSkill && instanceData.genericSkill.stock > 0)
-            {
-                indicator.active = true;
-            }
-            else
+            if (activeCount <= 0)
             {
                 indicator.active = false;
+                trackingTarget = null;
+                return;
             }
             trackerUpdateStopwatch += deltaTime;
             if (trackerUpdateStopwatch >= 1f / trackerUpdateFrequency)
@@ -168,6 +167,41 @@ namespace Goobo13
             characterBody.gameObject.layer = layer;
             if (characterBody.characterMotor && characterBody.characterMotor.Motor) characterBody.characterMotor.Motor.RebuildCollidableLayers();
             Destroy(this);
+        }
+    }
+    public class RevolutionaryController : MonoBehaviour
+    {
+        public CharacterBody characterBody;
+        public CharacterBody currentTarget;
+        public Indicator indicator;
+        public void Awake()
+        {
+            indicator = new Indicator(gameObject, Assets.GooboCloneMissileTrackingIndicator);
+        }
+        public void FixedUpdate()
+        {
+            if (currentTarget && currentTarget.mainHurtBox)
+            {
+                indicator.targetTransform = currentTarget.mainHurtBox.transform;
+                indicator.active = true;
+            }
+            else
+            {
+                indicator.targetTransform = null;
+                indicator.active = false;
+            }
+        }
+    }
+    public class ForceUpdatePostProcessLayer : MonoBehaviour
+    {
+        public void Start()
+        {
+            foreach (Camera camera in Camera.allCameras)
+            {
+                PostProcessLayer postProcessLayer = camera.GetComponent<PostProcessLayer>();
+                if (!postProcessLayer) continue;
+                PostProcessVolume postProcessVolume = camera.GetComponent<PostProcessVolume>();
+            }
         }
     }
 }

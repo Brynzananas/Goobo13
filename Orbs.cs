@@ -115,6 +115,9 @@ namespace Goobo13
             if (!genericSkill) return;
             if (!characterBody.HasBuff(Assets.GooboConsumptionCharge)) new AddSlamSkillOverride(characterBody.netId).Send(R2API.Networking.NetworkDestination.Clients);
             characterBody.AddBuff(Assets.GooboConsumptionCharge);
+            healthComponent.itemCounts.barrierOnOverHeal++;
+            healthComponent.HealFraction(ConsumeMinionsConfig.healPercentage.Value / 100f, default);
+            healthComponent.itemCounts.barrierOnOverHeal--;
         }
         public override void Begin()
         {
