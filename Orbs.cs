@@ -23,7 +23,6 @@ namespace Goobo13
         private GameObject _attacker;
         public TeamIndex teamIndex;
         public int gooboAmount;
-        public DamageAPI.ModdedDamageType[] moddedDamageTypes;
         public GameObject visualPrefab;
         public GameObject attacker
         {
@@ -76,7 +75,6 @@ namespace Goobo13
                 teamIndex = teamIndex,
                 position = target.collider.bounds.center,
             };
-            if (moddedDamageTypes != null) foreach (DamageAPI.ModdedDamageType moddedDamageType in moddedDamageTypes) blastAttack.AddModdedDamageType(moddedDamageType);
             blastAttack.Fire();
             EffectData effectData = new EffectData
             {

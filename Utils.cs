@@ -78,6 +78,7 @@ namespace Goobo13
                 if (gooboMaster.inventory)
                 {
                     gooboMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, SummonGoobosConfig.lifetime.Value);
+                    gooboMaster.inventory.GiveItem(Assets.CopyOwnerStats, 1);
                 }
                 if (gooboBody)
                 {
@@ -114,6 +115,7 @@ namespace Goobo13
                 summonerBodyObject = null,
                 teamIndexOverride = TeamIndex.Monster,
                 rotation = rotation,
+                useAmbientLevel = true,
             }.Perform();
             if (gooboMaster)
             {

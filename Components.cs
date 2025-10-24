@@ -5,6 +5,7 @@ using RoR2;
 using RoR2.Orbs;
 using RoR2.Projectile;
 using RoR2.Skills;
+using RoR2BepInExPack.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,25 +20,19 @@ namespace Goobo13
 {
     public class GobooThrowGooboMinionsTracker : MonoBehaviour
     {
+        public List<GooboSkillDef.InstanceData> instanceDatas = [];
         public int activeCount;
-        public static GameObject trackingPrefab;
-        public float maxTrackingDistance = 48f;
-        public float maxTrackingAngle = 45f;
-        public float trackerUpdateFrequency = 10f;
+        public static float maxTrackingDistance => TrackerConfig.maxDistance.Value;
+        public static float maxTrackingAngle => TrackerConfig.maxAngle.Value;
+        public static float trackerUpdateFrequency = 10f;
         public HurtBox trackingTarget;
         public CharacterBody characterBody;
         public TeamComponent teamComponent;
         public InputBankTest inputBank;
         public float trackerUpdateStopwatch;
-        public Indicator indicator;
         public BullseyeSearch search = new BullseyeSearch();
         public void Awake()
         {
-            if (trackingPrefab == null)
-            {
-                trackingPrefab = LegacyResourcesAPI.Load<GameObject>("Prefabs/HuntressTrackingIndicator");
-            }
-            indicator = new Indicator(gameObject, trackingPrefab);
         }
         public void Start()
         {
@@ -47,11 +42,11 @@ namespace Goobo13
         }
         public void OnEnable()
         {
-            indicator.active = true;
+            foreach (GooboSkillDef.InstanceData instanceData in instanceDatas) instanceData.indicator?.active = true;
         }
         public void OnDisable()
         {
-            indicator.active = false;
+            foreach (GooboSkillDef.InstanceData instanceData in instanceDatas) instanceData.indicator?.active = false;
         }
         public void FixedUpdate()
         {
@@ -59,20 +54,32 @@ namespace Goobo13
         }
         public void MyFixedUpdate(float deltaTime)
         {
-            if (activeCount <= 0)
-            {
-                indicator.active = false;
-                trackingTarget = null;
-                return;
-            }
             trackerUpdateStopwatch += deltaTime;
             if (trackerUpdateStopwatch >= 1f / trackerUpdateFrequency)
             {
                 trackerUpdateStopwatch -= 1f / trackerUpdateFrequency;
-                HurtBox hurtBox = trackingTarget;
                 Ray ray = new Ray(inputBank.aimOrigin, inputBank.aimDirection);
                 SearchForTarget(ray);
-                indicator.targetTransform = (trackingTarget ? trackingTarget.transform : null);
+            }
+            if (trackingTarget)
+            {
+                foreach (GooboSkillDef.InstanceData instanceData in instanceDatas)
+                {
+                    Indicator indicator = instanceData.indicator;
+                    if (indicator == null) continue;
+                    indicator.targetTransform = trackingTarget.transform;
+                    indicator.active = instanceData.genericSkill.CanExecute();
+                }
+            }
+            else
+            {
+                foreach (GooboSkillDef.InstanceData instanceData in instanceDatas)
+                {
+                    Indicator indicator = instanceData.indicator;
+                    if (indicator == null) continue;
+                    indicator.targetTransform = null;
+                    indicator.active = false;
+                }
             }
         }
         public void SearchForTarget(Ray aimRay)
@@ -87,14 +94,31 @@ namespace Goobo13
             search.maxAngleFilter = maxTrackingAngle;
             search.RefreshCandidates();
             search.FilterOutGameObject(gameObject);
+            bool sort = TrackerConfig.sortByPriority.Value;
+            int priority = 0;
             foreach (HurtBox hurtBox in search.GetResults())
             {
-                if (hurtBox.healthComponent && hurtBox.healthComponent.alive)
+                HealthComponent healthComponent = hurtBox.healthComponent;
+                if (!sort)
+                {
+                    if (healthComponent.alive)
+                    {
+                        trackingTarget = hurtBox;
+                        return;
+                    }
+                    continue;
+                }
+                if (healthComponent == null) continue;
+                CharacterBody characterBody = healthComponent.body;
+                if (characterBody == null) continue;
+                int newPriority = characterBody.isBoss ? 3 : (characterBody.isElite ? 2 : 1);
+                if (newPriority > priority && healthComponent.alive)
                 {
                     trackingTarget = hurtBox;
-                    return;
+                    priority = newPriority;
                 }
             }
+            if (priority > 0) return;
             trackingTarget = null;
         }
     }
@@ -204,4 +228,249 @@ namespace Goobo13
             }
         }
     }
+    public class SelectTargetsToDimension : MonoBehaviour
+    {
+        public List<TemporaryOverlay> temporaryOverlays = [];
+        public void OnTriggerEnter(Collider collider)
+        {
+            CharacterBody characterBody = collider.GetComponent<CharacterBody>();
+            if (characterBody == null) return;
+            ModelLocator modelLocator = characterBody.modelLocator;
+            if (modelLocator == null) return;
+            Transform modelTransform = modelLocator.modelTransform;
+            if (modelTransform == null) return;
+            CharacterModel characterModel = modelTransform.GetComponent<CharacterModel>();
+            if (characterModel == null) return;
+            TemporaryOverlay temporaryOverlay = characterBody.gameObject.AddComponent<TemporaryOverlay>();
+            temporaryOverlay.alphaCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+            temporaryOverlay.inspectorCharacterModel = characterModel;
+            temporaryOverlay.originalMaterial = Assets.EnterDimensionOverlay;
+            temporaryOverlay.AddToCharacerModel(characterModel);
+            temporaryOverlays.Add(temporaryOverlay);
+        }
+        public void OnTriggerExit(Collider collider)
+        {
+            TemporaryOverlay temporaryOverlay = collider.GetComponent<TemporaryOverlay>();
+            if (temporaryOverlay == null) return;
+            if (temporaryOverlays.Contains(temporaryOverlay))
+            {
+                temporaryOverlays.Remove(temporaryOverlay);
+                Destroy(temporaryOverlay);
+            }
+        }
+        public void OnDestroy()
+        {
+            foreach (var overlay in temporaryOverlays)
+            {
+                if (!overlay) continue;
+                Destroy(overlay);
+            }
+        }
+    }
+    [RequireComponent(typeof(ProjectileController))]
+    [RequireComponent(typeof(ProjectileDamage))]
+    public class SpawnFartsController : MonoBehaviour
+    {
+        public ProjectileController projectileController;
+        public ProjectileDamage projectileDamage;
+        public List<SpawnFartsController> banned = [];
+        public static FixedConditionalWeakTable<GameObject, List<SpawnFartsController>> activeFarts = [];
+        private bool noBitches;
+        private bool farting;
+        public void Start()
+        {
+            noBitches = !(projectileController ? projectileController.owner : false);
+            if (noBitches) return;
+            if (activeFarts.ContainsKey(projectileController.owner))
+            {
+                activeFarts[projectileController.owner].Add(this);
+            }
+            else
+            {
+                activeFarts.Add(projectileController.owner, [this]);
+            }
+        }
+        public void OnDisable()
+        {
+            if (!projectileDamage || !projectileController || noBitches || !projectileController.owner || !activeFarts.ContainsKey(projectileController.owner)) return;
+            List<SpawnFartsController> spawnFartsControllers = activeFarts[projectileController.owner];
+            spawnFartsControllers.Remove(this);
+            bool isAnyoneFarting = false;
+            do
+            {
+                isAnyoneFarting = false;
+                for (int i = 0; i < spawnFartsControllers.Count; ++i)
+                {
+                    SpawnFartsController spawnFartsController = spawnFartsControllers[i];
+                    if (spawnFartsController == null || spawnFartsController == this) continue;
+                    if (banned.Contains(spawnFartsController)) continue;
+                    DamageTypeCombo damageTypeCombo = new DamageTypeCombo(projectileDamage.damageType.damageType, projectileDamage.damageType.damageTypeExtended, projectileDamage.damageType.damageSource);
+                    //damageTypeCombo.AddModdedDamageType(Assets.AbysstouchedDamageType);
+                    Vector3 vector3 = spawnFartsController.transform.position - transform.position;
+                    float fartDistance = vector3.magnitude;
+                    FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
+                    {
+                        projectilePrefab = Assets.RevolutionaryLingeringSanguineVapor,
+                        position = transform.position,
+                        rotation = Util.QuaternionSafeLookRotation(vector3.normalized),
+                        owner = projectileController.owner,
+                        damage = projectileDamage.damage,
+                        force = projectileDamage.force,
+                        crit = projectileDamage.crit,
+                        damageTypeOverride = new DamageTypeCombo?(damageTypeCombo),
+                        speedOverride = fartDistance,
+                    };
+                    ProjectileManager.instance.FireProjectile(fireProjectileInfo);
+                    isAnyoneFarting = true;
+                    banned.Add(spawnFartsController);
+                    spawnFartsController.farting = true;
+                    if (!farting) Destroy(spawnFartsController.gameObject);
+                }
+            } while (isAnyoneFarting);
+            
+        }
+    }
+    public class DeadlyFartController : MonoBehaviour, IProjectileSpeedModifierHandler
+    {
+        public float range;
+        public float radius;
+        public float lifetime;
+        public float stopwatch;
+        public ParticleSystem[] particleSystems;
+        public float desiredForwardSpeed { set => range = value; }
+        public void Start()
+        {
+            Vector3 localScale = new Vector3(radius, radius, range);
+            Vector3 localPosition = transform.localPosition;
+            localPosition.z += range / 2f;
+            transform.localPosition = localPosition;
+            transform.localScale = localScale;
+            localScale *= 2f;
+            foreach (var particle in particleSystems)
+            {
+                ParticleSystem.ShapeModule shapeModule = particle.shape;
+                shapeModule.scale = localScale;
+            }
+        }
+        public void FixedUpdate()
+        {
+            stopwatch += Time.fixedDeltaTime;
+            if (stopwatch >= lifetime)
+            {
+                Destroy(gameObject);
+            }
+        }
+        public void OnDisable()
+        {
+            foreach (ParticleSystem particleSystem in particleSystems)
+            {
+                particleSystem.transform.SetParent(null, true);
+                particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                particleSystem.transform.localScale = Vector3.one;
+            }
+        }
+    }
+    public class DestroyOnParticleEndAndNoParticles : MonoBehaviour
+    {
+        public void Update()
+        {
+            if (trackedParticleSystem && !trackedParticleSystem.IsAlive() && trackedParticleSystem.particleCount <= 0)  GameObject.Destroy(gameObject);
+        }
+        public ParticleSystem trackedParticleSystem;
+    }
+    public class ChainProjectile : MonoBehaviour
+    {
+        public float age;
+        public List<Chain> chains = [];
+        public void FixedUpdate()
+        {
+            age += Time.fixedDeltaTime;
+            foreach (Chain chain in chains) HandleChains(chain);
+        }
+        public void HandleChains(Chain chain)
+        {
+            List<Transform> transforms = chain.transforms;
+            Vector3 direction = transform.rotation * chain.direction;
+            for (int i = 0; i < transforms.Count; i++)
+            {
+                Transform t = transforms[i];
+                Vector3 vector3 = transform.position + direction;
+                t.position = transform.position + direction * chain.distancePerAge * chain.ageCurve.Evaluate(age) * (i + 1);
+            }
+        }
+        [Serializable]
+        public struct Chain
+        {
+            public List<Transform> transforms;
+            public Vector3 direction;
+            public float distancePerAge;
+            public AnimationCurve ageCurve;
+        }
+    }
+    public class ScaleBetweenTransforms : MonoBehaviour
+    {
+        public Transform transform1;
+        public Transform transform2;
+        public void FixedUpdate()
+        {
+            Vector3 vector3 = transform2.position - transform1.position;
+            transform.rotation = Quaternion.LookRotation(vector3.normalized);
+            transform.position = transform1.position + vector3 / 2f;
+            Vector3 localScale = transform.localScale;
+            localScale.z = vector3.magnitude;
+            transform.localScale = localScale;
+        }
+    }
+    public class EnableDisableColliderAfterTime : MonoBehaviour
+    {
+        public Collider collider;
+        public float timeToEnable;
+        private float stopwatch;
+        private bool enable;
+        private bool done;
+        public void Start()
+        {
+            enable = !collider.enabled;
+        }
+
+        public void FixedUpdate()
+        {
+            stopwatch += Time.fixedDeltaTime;
+            if (!done && stopwatch >= timeToEnable)
+            {
+                collider.enabled = enable;
+                done = true;
+                Destroy(this);
+            }
+        }
+    }
+    /*
+    public class InflateCollider : MonoBehaviour
+    {
+        public Collider collider;
+        public float inflationTime;
+        private float endSize;
+        private float stopwatch;
+        public void Start()
+        {
+            SphereCollider sphereCollider = collider as SphereCollider;
+            if (sphereCollider)
+            {
+                endSize = sphereCollider.radius;
+                return;
+            }
+            CapsuleCollider capsuleCollider = collider as CapsuleCollider;
+            if (capsuleCollider)
+            {
+                endSize = capsuleCollider.radius;
+                return;
+            }
+        }
+        public void FixedUpdate()
+        {
+            stopwatch += Time.fixedDeltaTime;
+            SphereCollider sphereCollider = collider as SphereCollider;
+            CapsuleCollider capsuleCollider = collider as CapsuleCollider;
+        }
+    }*/
 }

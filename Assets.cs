@@ -6,6 +6,7 @@ using RoR2.Projectile;
 using RoR2.Skills;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Rendering.PostProcessing;
 
 namespace Goobo13
 {
@@ -26,23 +27,29 @@ namespace Goobo13
         public static GameObject GooboGrenadeType4Projectile;
         public static GameObject GooboGrenadeType5Projectile;
         public static GameObject RevolutionarySanguineVapor;
+        public static GameObject RevolutionaryChainSanguineVapor;
+        public static GameObject RevolutionaryLingeringSanguineVapor;
         public static GameObject RevolutionaryAbyssalSpike;
         public static GameObject GooboCorrosiveDogpileTrackingIndicator;
         public static GameObject GooboCloneMissileTrackingIndicator;
+        public static GameObject EnterDimensionIndicator;
+        public static Material EnterDimensionOverlay;
         public static EffectDef GooboOrb;
         public static EffectDef GooboExplosion;
         public static EffectDef GooboPunchEffect;
+        public static EffectDef GooboImpact;
         public static EffectDef GooboSplash;
         public static GameObject BetweenSpacesPP;
         public static PassiveItemSkillDef GooboJuxtapose;
         public static SteppedSkillDef GooboPunch;
         public static SkillDef GooboSlam;
         public static SkillDef Incite;
+        public static SkillDef Subdue;
         public static RevolutionarySkillDef Execution;
         public static RevolutionarySkillDef Advance;
         public static RevolutionarySkillDef Exile;
         public static GooboRandomGrenadeSkillDef GooboGrenade;
-        public static SkillDef GooboMissile;
+        public static GooboSkillDef GooboMissile;
         public static SkillDef CloneWalk;
         public static SkillDef UnstableCloneWalk;
         public static GooboSkillDef CorrosiveDogpile;
@@ -55,8 +62,10 @@ namespace Goobo13
         public static BuffDef GooboCorrosion;
         public static BuffDef GooboCorrosionCharge;
         public static BuffDef GooboConsumptionCharge;
+        public static BuffDef SpawnGooboOnEnd;
         public static BuffDef InBetweenSpace;
         public static ItemDef GooboJuxtaposePassive;
+        public static ItemDef CopyOwnerStats;
         public static ItemDef ImpStack;
         public static DotController.DotDef GooboCorrosionDot;
         public static DotController.DotIndex GooboCorrosionDotIndex;
@@ -72,6 +81,10 @@ namespace Goobo13
             Material[] materials = assetBundle.LoadAllAssets<Material>();
             foreach (Material material in assetBundle.LoadAllAssets<Material>())
             {
+                if (material.name == "matEnterDimensionOverlay")
+                {
+                    EnterDimensionOverlay = material;
+                }
                 if (!material.shader.name.StartsWith("StubbedRoR2") && !material.shader.name.StartsWith("StubbedDecalicious"))
                 {
                     continue;
@@ -113,30 +126,48 @@ namespace Goobo13
             GooboGrenadeType4Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType4Projectile.prefab").RegisterProjectile();
             GooboGrenadeType5Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType5Projectile.prefab").RegisterProjectile();
             RevolutionarySanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionarySanguineVapor.prefab").RegisterProjectile();
+            RevolutionaryChainSanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionaryChainSanguineVapor.prefab").RegisterProjectile();
+            RevolutionaryLingeringSanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionaryLingeringSanguineVapor.prefab").RegisterProjectile();
             RevolutionaryAbyssalSpike = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionaryAbyssalSpike.prefab").RegisterProjectile();
             GooboExplosion = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboExplosion.prefab").RegisterEffect();
             GooboPunchEffect = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboPunchEffect.prefab").RegisterEffect();
+            GooboImpact = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboImpact.prefab").RegisterEffect();
             GooboSplash = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboCloneExplosion.prefab").RegisterEffect();
             GooboOrb = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Effects/GooboOrb.prefab").RegisterEffect();
             BetweenSpacesPP = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Effects/ppBetweenSpace.prefab");
+            //PostProcessProfile postProcessProfile = BetweenSpacesPP.GetComponent<PostProcessVolume>().profile;
+            //RampFog rampFog = postProcessProfile.AddSettings<RampFog>();
+            //rampFog.active = true;
+            //rampFog.fogColorStart.overrideState = true;
+            //rampFog.fogColorStart.value = new Color(1f, 0.7f, 0.7f, 0.2f);
+            //rampFog.fogColorMid.overrideState = true;
+            //rampFog.fogColorMid.value = new Color(1f, 0.42f, 0.42f, 0.5f);
+            //rampFog.fogColorEnd.overrideState = true;
+            //rampFog.fogColorEnd.value = new Color(1f, 0f, 0f, 1f);
+            EnterDimensionIndicator = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Effects/EnterDimensionIndicator.prefab");
             GooboJuxtapose = assetBundle.LoadAsset<PassiveItemSkillDef>("Assets/Goobo13/Skills/GooboJuxtapose.asset").RegisterSkillDef();
             GooboPunch = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/GooboPunch.asset").RegisterSkillDef();
             GooboSlam = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboSlam.asset").RegisterSkillDef();
             Incite = assetBundle.LoadAsset<SkillDef>("Assets/Revolutionary/Skills/Incite.asset").RegisterSkillDef();
+            Subdue = assetBundle.LoadAsset<SkillDef>("Assets/Revolutionary/Skills/Subdue.asset").RegisterSkillDef();
             Execution = assetBundle.LoadAsset<RevolutionarySkillDef>("Assets/Revolutionary/Skills/Execution.asset").RegisterSkillDef();
             Advance = assetBundle.LoadAsset<RevolutionarySkillDef>("Assets/Revolutionary/Skills/Advance.asset").RegisterSkillDef();
             Exile = assetBundle.LoadAsset<RevolutionarySkillDef>("Assets/Revolutionary/Skills/Exile.asset").RegisterSkillDef();
             GooboGrenade = assetBundle.LoadAsset<GooboRandomGrenadeSkillDef>("Assets/Goobo13/Skills/GooboGrenade.asset").RegisterSkillDef();
-            GooboMissile = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboMissile.asset").RegisterSkillDef();
+            GooboMissile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/GooboMissile.asset").RegisterSkillDef();
+            GooboMissile.indicator = GooboCloneMissileTrackingIndicator;
             CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/CloneWalk.asset").RegisterSkillDef();
             UnstableCloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/UnstableCloneWalk.asset").RegisterSkillDef();
             CorrosiveDogpile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveDogpile.asset").RegisterSkillDef();
+            CorrosiveDogpile.indicator = GooboCorrosiveDogpileTrackingIndicator;
             GooboConsumption = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveConsumption.asset").RegisterSkillDef();
             GooboJuxtaposePassive = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/GooboJuxtaposePassive.asset").RegisterItemDef();
+            CopyOwnerStats = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/CopyOwnerStats.asset").RegisterItemDef();
             ImpStack = assetBundle.LoadAsset<ItemDef>("Assets/Revolutionary/Items/ImpStack.asset").RegisterItemDef();
             GooboCorrosion = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboCorrosion.asset").RegisterBuffDef();
             GooboCorrosionCharge = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboCorrosionCharge.asset").RegisterBuffDef();
             GooboConsumptionCharge = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdGooboConsumptionCharge.asset").RegisterBuffDef();
+            SpawnGooboOnEnd = assetBundle.LoadAsset<BuffDef>("Assets/Goobo13/Buffs/bdSpawnGooboOnEnd.asset").RegisterBuffDef();
             InBetweenSpace = assetBundle.LoadAsset<BuffDef>("Assets/Revolutionary/Buffs/InBetweenSpace.asset").RegisterBuffDef();
             Passive = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Passive.asset").RegisterSkillFamily();
             Primary = assetBundle.LoadAsset<SkillFamily>("Assets/Goobo13/SkillFamilies/Goobo13Primary.asset").RegisterSkillFamily();

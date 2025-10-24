@@ -16,12 +16,29 @@ namespace Goobo13
         {
             lifetime = CreateConfig(name, "Clone Lifetime", 10, "");
             maxAmount = CreateConfig(name, "Clone max Amount", 30, "");
+            statSharing = CreateConfig(name, "Share Stats Percentage", 50f, "");
             maxAmount.SettingChanged += MaxAmount_SettingChanged;
             MaxAmount_SettingChanged(maxAmount, null);
         }
         private static void MaxAmount_SettingChanged(object sender, EventArgs e) => Assets.CorrosiveDogpile.baseMaxStock = maxAmount.Value;
         public static ConfigEntry<int> lifetime;
         public static ConfigEntry<int> maxAmount;
+        public static ConfigEntry<float> statSharing;
+    }
+    public static class TrackerConfig
+    {
+        public const string name = "Tracker";
+        public static void Init()
+        {
+            maxDistance = CreateConfig(name, DistanceName, 48f, "");
+            maxAngle = CreateConfig(name, "Angle", 90f, "");
+            sortMode = CreateConfig(name, "Sort Mode", BullseyeSearch.SortMode.Angle, "");
+            sortByPriority = CreateConfig(name, "Sort by Priority", true, "Sort by: Boss -> Elite -> Enemy");
+        }
+        public static ConfigEntry<float> maxDistance;
+        public static ConfigEntry<float> maxAngle;
+        public static ConfigEntry<BullseyeSearch.SortMode> sortMode;
+        public static ConfigEntry<bool> sortByPriority;
     }
     public static class PunchConfig
     {
@@ -133,7 +150,7 @@ namespace Goobo13
             force = CreateConfig(name, ForceName, 100f, "");
             distance = CreateConfig(name, DistanceName, 24f, "");
             radius = CreateConfig(name, RadiusName, 3f, "");
-            duration = CreateConfig(name, DurationName, 0.25f, "");
+            duration = CreateConfig(name, DurationName, 0.5f, "");
             timeToAttack = CreateConfig(name, TimeToAttackName, 0.25f, "");
             timeToTarget = CreateConfig(name, TimeToTargetName, 0.5f, "");
             gooboAmount = CreateConfig(name, "Goobo Amount", 1, "");
@@ -190,7 +207,7 @@ namespace Goobo13
             healthPercentage = CreateConfig(name, "Health Percentage to Take", 15f, "");
             healthPercentageRandomSpread = CreateConfig(name, "Health Percentage to Take Random Spread", 10f, "");
             gooboAmount = CreateConfig(name, GooboAmountName, 2, "");
-            duration = CreateConfig(name, "Immunity " + DurationName, 1f, "");
+            duration = CreateConfig(name, "Immunity " + DurationName, 2f, "");
         }
         public static ConfigEntry<float> healthPercentage;
         public static ConfigEntry<float> healthPercentageRandomSpread;

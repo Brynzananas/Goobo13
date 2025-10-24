@@ -18,24 +18,30 @@ namespace Goobo13
         public bool isReadyTargetCheck;
         public bool canExecuteGooboMinionsCheck;
         public bool isReadyGooboMinionsCheck;
+        public GameObject indicator;
         public override BaseSkillInstanceData OnAssigned(GenericSkill skillSlot)
         {
             BaseSkillInstanceData baseSkillInstanceData = base.OnAssigned(skillSlot);
-            if (!tracking) return baseSkillInstanceData;
             GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetOrAddComponent<GobooThrowGooboMinionsTracker>();
             gobooThrowGooboMinionsTracker.activeCount++;
             InstanceData instanceData = new InstanceData
             {
-                gobooThrowGooboMinionsTracker = gobooThrowGooboMinionsTracker
+                gobooThrowGooboMinionsTracker = gobooThrowGooboMinionsTracker,
+                genericSkill = skillSlot,
+                indicator = indicator ? new Indicator(skillSlot.gameObject, indicator) : null
             };
+            gobooThrowGooboMinionsTracker.instanceDatas.Add(instanceData);
             return instanceData;
         }
         public override void OnUnassigned(GenericSkill skillSlot)
         {
             base.OnUnassigned(skillSlot);
-            if (!tracking) return;
-            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = skillSlot.GetComponent<GobooThrowGooboMinionsTracker>();
+            InstanceData instanceData = skillSlot.skillInstanceData == null ? null : skillSlot.skillInstanceData as InstanceData;
+            if (instanceData == null) return;
+            GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = instanceData.gobooThrowGooboMinionsTracker;
+            gobooThrowGooboMinionsTracker.instanceDatas.Remove(instanceData);
             if (gobooThrowGooboMinionsTracker) gobooThrowGooboMinionsTracker.activeCount--;
+            if (instanceData.indicator != null) Indicator.IndicatorManager.RemoveIndicator(instanceData.indicator);
         }
         public override void OnFixedUpdate(GenericSkill skillSlot, float deltaTime)
         {
@@ -65,6 +71,8 @@ namespace Goobo13
         public class InstanceData : BaseSkillInstanceData
         {
             public GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker;
+            public GenericSkill genericSkill;
+            public Indicator indicator;
         }
     }
     [CreateAssetMenu(menuName = "RoR2/SkillDef/Goobo/GooboRandomGrenadeSkillDef")]
@@ -111,12 +119,13 @@ namespace Goobo13
         public override void OnExecute([NotNull] GenericSkill skillSlot)
         {
             base.OnExecute(skillSlot);
-            if (transplanar)
+            if (transplanar) Transplan();
+        }
+        public static void Transplan()
+        {
+            if (Utils.GetRandomNodePosition(out Vector3 nodePosition))
             {
-                if (Utils.GetRandomNodePosition(out Vector3 nodePosition))
-                {
-                    Utils.SpawnEvilGooboClone(nodePosition, Quaternion.identity);
-                }
+                Utils.SpawnEvilGooboClone(nodePosition, Quaternion.identity);
             }
         }
     }

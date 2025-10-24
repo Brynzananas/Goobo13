@@ -40,6 +40,7 @@ namespace Goobo13
             riskOfOptionsEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(ModCompatabilities.RiskOfOptionsCompatability.GUID);
             Assets.Init();
             SummonGoobosConfig.Init();
+            TrackerConfig.Init();
             PunchConfig.Init();
             SuperPunchConfig.Init();
             ThrowGrenadeConfig.Init();

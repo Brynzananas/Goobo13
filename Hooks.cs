@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Goobo13
 {
@@ -32,7 +33,26 @@ namespace Goobo13
             On.RoR2.HealthComponent.TakeDamageProcess += HealthComponent_TakeDamageProcess;
             //On.RoR2.CharacterAI.BaseAI.ManagedFixedUpdate += BaseAI_ManagedFixedUpdate;
             RoR2Application.onLoadFinished += OnRoR2Loaded;
+            On.RoR2.CharacterBody.RecalculateStats += CharacterBody_RecalculateStats;
             hooksSet = true;
+        }
+        public static float copyStatsPercentage => SummonGoobosConfig.statSharing.Value;
+        private static void CharacterBody_RecalculateStats(On.RoR2.CharacterBody.orig_RecalculateStats orig, CharacterBody self)
+        {
+            orig(self);
+            int itemCount = self.inventory ? self.inventory.GetItemCount(Assets.CopyOwnerStats) : 0;
+            if (itemCount <= 0) return;
+            CharacterBody ownerBody = self?.master?.minionOwnership?.ownerMaster?.GetBody();
+            if (ownerBody == null) return;
+            float value = copyStatsPercentage / 100f;
+            self.damage = ownerBody.damage * value;
+            self.attackSpeed = ownerBody.attackSpeed * value;
+            self.moveSpeed = ownerBody.moveSpeed * value;
+            self.maxHealth = ownerBody.maxHealth * value;
+            self.crit = ownerBody.crit * value;
+            self.critMultiplier = ownerBody.critMultiplier * value;
+            self.regen = ownerBody.regen * value;
+            self.armor = ownerBody.armor * value;
         }
 
         private static void OnRoR2Loaded()
@@ -137,6 +157,8 @@ namespace Goobo13
                         int attackerImpStacks = attackerInventory.GetItemCount(Assets.ImpStack);
                         if (attackerImpStacks + impStacks > maxImpStacks)
                         {
+                            int diff = maxImpStacks - attackerImpStacks;
+                            if (diff < 0) return;
                             impStacks -= maxImpStacks - attackerImpStacks;
                             if (impStacks <= 0) return;
                         }
@@ -201,7 +223,6 @@ namespace Goobo13
                 }
             }
         }
-
         public static void UnsetHooks()
         {
             if (!hooksSet) return;
@@ -212,7 +233,6 @@ namespace Goobo13
             orig(self, characterBody);
             baseAIs.Remove(self);
         }
-
         public static List<BaseAI> baseAIs = [];
         private static void BaseAI_OnBodyStart(On.RoR2.CharacterAI.BaseAI.orig_OnBodyStart orig, BaseAI self, CharacterBody newBody)
         {
@@ -245,6 +265,22 @@ namespace Goobo13
         public static GameObject pp;
         private static void CharacterBody_SetBuffCount(On.RoR2.CharacterBody.orig_SetBuffCount orig, CharacterBody self, BuffIndex buffType, int newCount)
         {
+            if (NetworkServer.active)
+            {
+                if (self.master && buffType == Assets.SpawnGooboOnEnd.buffIndex)
+                {
+                    int buffCount = self.GetBuffCount(buffType);
+                    int removalCount = buffCount - newCount;
+                    if (removalCount > 0)
+                    {
+                        Vector3 direction = self.characterDirection ? self.characterDirection.forward : self.transform.forward;
+                        for (int i = 0; i < removalCount; i++)
+                        {
+                            Utils.SpawnGooboClone(self.master, self.transform.position, Quaternion.LookRotation(direction));
+                        }
+                    }
+                }
+            }
             if (buffType == Assets.GooboCorrosion.buffIndex) if (newCount > gooboBuffMaxStacks) newCount = gooboBuffMaxStacks;
             if (buffType == Assets.GooboConsumptionCharge.buffIndex) if (newCount > gooboConsumptionBuffMaxStacks) newCount = gooboConsumptionBuffMaxStacks;
             /*if (self.bodyIndex == Assets.DemolisherBodyIndex && buffType == Assets.GooboCorrosion.buffIndex)
