@@ -71,13 +71,14 @@ namespace Goobo13
             if (gooboMaster)
             {
                 Deployable deployable = gooboMaster.gameObject.AddComponent<Deployable>();
+                MasterSuicideOnTimer masterSuicideOnTimer = gooboMaster.gameObject.GetOrAddComponent<MasterSuicideOnTimer>();
+                masterSuicideOnTimer.lifeTimer = SummonGoobosConfig.lifetime.Value;
                 deployable.onUndeploy = new UnityEvent();
                 deployable.onUndeploy.AddListener(new UnityAction(gooboMaster.TrueKill));
                 characterMaster.AddDeployable(deployable, Assets.GooboDeployableSlot);
                 CharacterBody gooboBody = gooboMaster.GetBody();
                 if (gooboMaster.inventory)
                 {
-                    gooboMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, SummonGoobosConfig.lifetime.Value);
                     gooboMaster.inventory.GiveItem(Assets.CopyOwnerStats, 1);
                 }
                 if (gooboBody)

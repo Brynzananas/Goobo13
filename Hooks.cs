@@ -34,8 +34,18 @@ namespace Goobo13
             //On.RoR2.CharacterAI.BaseAI.ManagedFixedUpdate += BaseAI_ManagedFixedUpdate;
             RoR2Application.onLoadFinished += OnRoR2Loaded;
             On.RoR2.CharacterBody.RecalculateStats += CharacterBody_RecalculateStats;
+            On.RoR2.GenericSkill.CanExecute += GenericSkill_CanExecute;
+            RoR2Application.onLoadFinished += Language.Init;
             hooksSet = true;
         }
+
+        private static bool GenericSkill_CanExecute(On.RoR2.GenericSkill.orig_CanExecute orig, GenericSkill self)
+        {
+            bool ret = orig(self);
+            if (self.characterBody && self.characterBody.HasBuff(Assets.SpawnGooboOnEnd)) ret = false;
+            return ret;
+        }
+
         public static float copyStatsPercentage => SummonGoobosConfig.statSharing.Value;
         private static void CharacterBody_RecalculateStats(On.RoR2.CharacterBody.orig_RecalculateStats orig, CharacterBody self)
         {

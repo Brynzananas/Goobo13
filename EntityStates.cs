@@ -996,10 +996,7 @@ namespace Goobo13
             if (!isAuthority) return;
             outer.SetNextStateToMain();
         }
-        public override InterruptPriority GetMinimumInterruptPriority()
-        {
-            return InterruptPriority.PrioritySkill;
-        }
+        public override InterruptPriority GetMinimumInterruptPriority() => InterruptPriority.PrioritySkill;
     }
     public class FireSpout : BaseState
     {

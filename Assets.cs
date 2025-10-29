@@ -15,7 +15,9 @@ namespace Goobo13
         public static AssetBundle assetBundle;
         public static SurvivorDef Goobo13;
         public static GameObject Goobo13Body;
+        public static CharacterBody Goobo13CharacterBody;
         public static GameObject Goobo13CloneBody;
+        public static CharacterBody Goobo13CloneCharacterBody;
         public static GameObject Goobo13Master;
         public static GameObject Goobo13CloneMaster;
         public static GameObject Goobo13Emotes;
@@ -99,7 +101,9 @@ namespace Goobo13
             }
             Goobo13 = assetBundle.LoadAsset<SurvivorDef>("Assets/Goobo13/Character/Goobo13.asset").RegisterSurvivorDef();
             Goobo13Body = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13Body.prefab").RegisterCharacterBody();
+            Goobo13CharacterBody = Goobo13Body.GetComponent<CharacterBody>();
             Goobo13CloneBody = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13CloneBody.prefab").RegisterCharacterBody();
+            Goobo13CloneCharacterBody = Goobo13CloneBody.GetComponent<CharacterBody>();
             Goobo13Master = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13MonsterMaster.prefab").RegisterCharacterMaster();
             Goobo13CloneMaster = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13CloneMonsterMaster.prefab").RegisterCharacterMaster();
             Goobo13Emotes = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Character/Goobo13Emotes.prefab");
