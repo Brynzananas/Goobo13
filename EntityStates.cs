@@ -187,6 +187,7 @@ namespace Goobo13
         public static DamageType damageType => SuperPunchConfig.damageType.Value;
         public static DamageTypeExtended damageTypeExtended => SuperPunchConfig.damageTypeExtended.Value;
         public static BlastAttack.FalloffModel falloffModel => SuperPunchConfig.falloffModel.Value;
+        public static float transitionAnimationSpeed = 0.5f;
         public static float baseUpTransitionSpeed = 0.05f;
         public static float baseDownTransitionSpeed = 0.05f;
         public float upTransitionSpeed;
@@ -260,7 +261,7 @@ namespace Goobo13
         public override void OnExit()
         {
             base.OnExit();
-            PlayCrossfade("UpperBody, Override", "Punch3Transition", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToAttack), downTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "Punch3Transition", "UpperBody.playbackRate", Mathf.Max(0.01f, transitionAnimationSpeed), downTransitionSpeed);
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {
@@ -740,12 +741,12 @@ namespace Goobo13
             base.OnEnter();
             StartAimMode();
             SetValues();
-            PlayCrossfade("UpperBody, Override", "ThrowUp", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToThrow), upTransitionSpeed);
+            PlayCrossfade("UpperBody, Override", "GooboMissileUp", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToThrow), upTransitionSpeed);
             if (NetworkServer.active) FindTarget();
         }
         public void Fire(Ray ray)
         {
-            PlayAnimation("UpperBody, Override", "ThrowDown", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToThrow), downTransitionSpeed);
+            PlayAnimation("UpperBody, Override", "GooboMissileDown", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToThrow), downTransitionSpeed);
             if (NetworkServer.active)
             {
                 DamageTypeCombo damageTypeCombo = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource());
@@ -996,6 +997,105 @@ namespace Goobo13
             if (!isAuthority) return;
             outer.SetNextStateToMain();
         }
+        public override InterruptPriority GetMinimumInterruptPriority() => InterruptPriority.PrioritySkill;
+    }
+    public class Leap : BaseGooboState, SteppedSkillDef.IStepSetter
+    {
+        public static float baseDamageCoefficient => LeapConfig.damageCoefficient.Value;
+        public static float procCoefficient => LeapConfig.procCoefficient.Value;
+        public static float baseRadius => LeapConfig.radius.Value;
+        public static float force => LeapConfig.force.Value;
+        public static DamageType damageType => LeapConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => LeapConfig.damageTypeExtended.Value;
+        public static BlastAttack.FalloffModel falloffModel => LeapConfig.falloffModel.Value;
+        public static float baseMinimumYVelocity => LeapConfig.minimumYVelocity.Value;
+        public static float baseVelocityPerLeap => LeapConfig.velocityPerLeap.Value;
+        public static float cloakDuration => LeapConfig.duration.Value;
+        public static float airControl => LeapConfig.airControl.Value;
+        public Vector3 vector3;
+        public int leapCount;
+        public bool fired;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            StartAimMode();
+            if (NetworkServer.active)
+            {
+                characterBody.AddBuff(JunkContent.Buffs.IgnoreFallDamage);
+            }
+            if (!isAuthority) return;
+            if (!characterMotor)
+            {
+                outer.SetNextStateToMain();
+                return;
+            }
+            Ray ray = GetAimRay();
+            Vector3 vector3 = ray.direction * characterBody.moveSpeed * baseVelocityPerLeap * (leapCount);
+            vector3.y = Mathf.Max(baseMinimumYVelocity, vector3.y);
+            characterMotor.velocity = vector3;
+            characterMotor.Motor?.ForceUnground();
+            characterMotor.onMovementHit += CharacterMotor_onMovementHit;
+            characterMotor.disableAirControlUntilCollision = true;
+            PlayCrossfade("UpperBody, Override", "SlamUp", "UpperBody.playbackRate", 1f, 0.05f);
+        }
+
+        private void CharacterMotor_onMovementHit(ref CharacterMotor.MovementHitInfo movementHitInfo)
+        {
+            if (fired) return;
+            BlastAttack blastAttack = new BlastAttack()
+            {
+                attacker = gameObject,
+                baseDamage = characterBody.damage * baseDamageCoefficient,
+                baseForce = force,
+                crit = RollCrit(),
+                damageType = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource()),
+                falloffModel = falloffModel,
+                damageColorIndex = DamageColorIndex.Default,
+                inflictor = gameObject,
+                losType = BlastAttack.LoSType.None,
+                procCoefficient = procCoefficient,
+                radius = baseRadius,
+                teamIndex = GetTeam(),
+                impactEffect = Assets.GooboImpact.index,
+                position = characterBody.footPosition
+            };
+            blastAttack.AddModdedDamageType(Assets.ChanceToSpawnGooboDamageType);
+            blastAttack.Fire();
+            EffectData effectData = new()
+            {
+                origin = blastAttack.position,
+                scale = blastAttack.radius,
+            };
+            EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+            outer.SetNextStateToMain();
+            if (leapCount == 2) characterBody.AddTimedBuffAuthority(Assets.SpawnGooboOnEnd.buffIndex, 0f);
+            if (leapCount >= 3) characterBody.AddTimedBuffAuthority(RoR2Content.Buffs.Cloak.buffIndex, cloakDuration);
+            fired = true;
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!isAuthority) return;
+            if (characterMotor)
+            {
+                if (inputBank)  vector3 = Vector3.MoveTowards(vector3, inputBank.moveVector, characterMotor.airControl * Time.fixedDeltaTime);
+                characterMotor.rootMotion += vector3 * characterBody.moveSpeed * airControl * Time.fixedDeltaTime;
+            }
+            if (inputBank && inputBank.sprint.justPressed) outer.SetNextStateToMain();
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            if (fired) PlayCrossfade("UpperBody, Override", "SlamTransition", "UpperBody.playbackRate", 1f, 0.05f);
+            if (NetworkServer.active)
+            {
+                characterBody.RemoveBuff(JunkContent.Buffs.IgnoreFallDamage);
+                characterBody.AddTimedBuff(JunkContent.Buffs.IgnoreFallDamage, 0.25f);
+            }
+            if (!isAuthority) return;
+            if (characterMotor) characterMotor.onMovementHit -= CharacterMotor_onMovementHit;
+        }
+        public void SetStep(int i) => leapCount = i + 1;
         public override InterruptPriority GetMinimumInterruptPriority() => InterruptPriority.PrioritySkill;
     }
     public class FireSpout : BaseState

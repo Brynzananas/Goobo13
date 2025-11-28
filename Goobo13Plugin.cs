@@ -49,6 +49,7 @@ namespace Goobo13
             GooboMissileConfig.Init();
             ConsumeMinionsConfig.Init();
             UnstableDecoyConfig.Init();
+            LeapConfig.Init();
             Hooks.SetHooks();
         }
         public void OnDestroy()

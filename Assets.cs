@@ -54,6 +54,7 @@ namespace Goobo13
         public static GooboSkillDef GooboMissile;
         public static SkillDef CloneWalk;
         public static SkillDef UnstableCloneWalk;
+        public static SteppedSkillDef Leap;
         public static GooboSkillDef CorrosiveDogpile;
         public static GooboSkillDef GooboConsumption;
         public static SkillFamily Passive;
@@ -162,6 +163,7 @@ namespace Goobo13
             GooboMissile.indicator = GooboCloneMissileTrackingIndicator;
             CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/CloneWalk.asset").RegisterSkillDef();
             UnstableCloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/UnstableCloneWalk.asset").RegisterSkillDef();
+            Leap = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/Leap.asset").RegisterSkillDef();
             CorrosiveDogpile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveDogpile.asset").RegisterSkillDef();
             CorrosiveDogpile.indicator = GooboCorrosiveDogpileTrackingIndicator;
             GooboConsumption = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveConsumption.asset").RegisterSkillDef();

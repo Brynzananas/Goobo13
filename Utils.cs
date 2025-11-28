@@ -33,6 +33,7 @@ namespace Goobo13
         public const string SummonGoobosName = "Goobo Juxtapose";
         public const string PunchName = "Goobo Punch";
         public const string SuperPunchName = "Goobo Super Punch";
+        public const string LeapName = "Leap";
         public const string SlamName = "Slam";
         public const string ThrowGrenadeName = "Goobo Grenade";
         public const string GooboMissileName = "Goobo Missile";

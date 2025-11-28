@@ -214,4 +214,33 @@ namespace Goobo13
         public static ConfigEntry<int> gooboAmount;
         public static ConfigEntry<float> duration;
     }
+    public static class LeapConfig
+    {
+        public const string name = LeapName;
+        public static void Init()
+        {
+            damageCoefficient = CreateConfig(name, DamageCoefficientName, 3f, "");
+            procCoefficient = CreateConfig(name, ProcCoefficientName, 1f, "");
+            radius = CreateConfig(name, RadiusName, 6f, "");
+            force = CreateConfig(name, ForceName, 300f, "");
+            minimumYVelocity = CreateConfig(name, "Minimum Y Velocity", 24f, "");
+            velocityPerLeap = CreateConfig(name, "Speed Multiplier", 3f, "");
+            duration = CreateConfig(name, "Cloak " + DurationName, 3f, "");
+            airControl = CreateConfig(name, "Air Control", 5f, "");
+            falloffModel = CreateConfig(name, FalloffName, BlastAttack.FalloffModel.None, "");
+            damageType = CreateConfig(name, DamageTypeName, DamageType.Generic, "");
+            damageTypeExtended = CreateConfig(name, DamageTypeExtendedName, DamageTypeExtended.Generic, "");
+        }
+        public static ConfigEntry<float> damageCoefficient;
+        public static ConfigEntry<float> procCoefficient;
+        public static ConfigEntry<float> radius;
+        public static ConfigEntry<float> force;
+        public static ConfigEntry<float> minimumYVelocity;
+        public static ConfigEntry<float> velocityPerLeap;
+        public static ConfigEntry<float> duration;
+        public static ConfigEntry<float> airControl;
+        public static ConfigEntry<BlastAttack.FalloffModel> falloffModel;
+        public static ConfigEntry<DamageType> damageType;
+        public static ConfigEntry<DamageTypeExtended> damageTypeExtended;
+    }
 }
