@@ -28,6 +28,7 @@ namespace Goobo13
         public static GameObject GooboGrenadeType3Projectile;
         public static GameObject GooboGrenadeType4Projectile;
         public static GameObject GooboGrenadeType5Projectile;
+        public static GameObject GooboBallVehicle;
         public static GameObject RevolutionarySanguineVapor;
         public static GameObject RevolutionaryChainSanguineVapor;
         public static GameObject RevolutionaryLingeringSanguineVapor;
@@ -55,6 +56,7 @@ namespace Goobo13
         public static SkillDef CloneWalk;
         public static SkillDef UnstableCloneWalk;
         public static SteppedSkillDef Leap;
+        public static SkillDef Ball;
         public static GooboSkillDef CorrosiveDogpile;
         public static GooboSkillDef GooboConsumption;
         public static SkillFamily Passive;
@@ -130,6 +132,7 @@ namespace Goobo13
             GooboGrenadeType3Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType3Projectile.prefab").RegisterProjectile();
             GooboGrenadeType4Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType4Projectile.prefab").RegisterProjectile();
             GooboGrenadeType5Projectile = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboGrenadeType5Projectile.prefab").RegisterProjectile();
+            GooboBallVehicle = assetBundle.LoadAsset<GameObject>("Assets/Goobo13/Projectiles/GooboBallVehicle.prefab").RegisterNetworkPrefab();
             RevolutionarySanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionarySanguineVapor.prefab").RegisterProjectile();
             RevolutionaryChainSanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionaryChainSanguineVapor.prefab").RegisterProjectile();
             RevolutionaryLingeringSanguineVapor = assetBundle.LoadAsset<GameObject>("Assets/Revolutionary/Projectiles/RevolutionaryLingeringSanguineVapor.prefab").RegisterProjectile();
@@ -161,12 +164,13 @@ namespace Goobo13
             GooboGrenade = assetBundle.LoadAsset<GooboRandomGrenadeSkillDef>("Assets/Goobo13/Skills/GooboGrenade.asset").RegisterSkillDef();
             GooboMissile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/GooboMissile.asset").RegisterSkillDef();
             GooboMissile.indicator = GooboCloneMissileTrackingIndicator;
-            CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/CloneWalk.asset").RegisterSkillDef();
-            UnstableCloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/UnstableCloneWalk.asset").RegisterSkillDef();
-            Leap = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/Leap.asset").RegisterSkillDef();
-            CorrosiveDogpile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveDogpile.asset").RegisterSkillDef();
+            CloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboCloneWalk.asset").RegisterSkillDef();
+            UnstableCloneWalk = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboUnstableCloneWalk.asset").RegisterSkillDef();
+            Leap = assetBundle.LoadAsset<SteppedSkillDef>("Assets/Goobo13/Skills/GooboLeap.asset").RegisterSkillDef();
+            Ball = assetBundle.LoadAsset<SkillDef>("Assets/Goobo13/Skills/GooboBall.asset").RegisterSkillDef();
+            CorrosiveDogpile = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/GooboCorrosiveDogpile.asset").RegisterSkillDef();
             CorrosiveDogpile.indicator = GooboCorrosiveDogpileTrackingIndicator;
-            GooboConsumption = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/CorrosiveConsumption.asset").RegisterSkillDef();
+            GooboConsumption = assetBundle.LoadAsset<GooboSkillDef>("Assets/Goobo13/Skills/GooboCorrosiveConsumption.asset").RegisterSkillDef();
             GooboJuxtaposePassive = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/GooboJuxtaposePassive.asset").RegisterItemDef();
             CopyOwnerStats = assetBundle.LoadAsset<ItemDef>("Assets/Goobo13/Items/CopyOwnerStats.asset").RegisterItemDef();
             ImpStack = assetBundle.LoadAsset<ItemDef>("Assets/Revolutionary/Items/ImpStack.asset").RegisterItemDef();
@@ -186,6 +190,7 @@ namespace Goobo13
             typeof(ThrowGrenade).RegisterEntityState();
             typeof(Decoy).RegisterEntityState();
             typeof(FireMinions).RegisterEntityState();
+            typeof(ThrowClone).RegisterEntityState();
             typeof(GooboDeath).RegisterEntityState();
             typeof(AimGooboMissile).RegisterEntityState();
             typeof(FireGooboMissile).RegisterEntityState();
@@ -193,16 +198,19 @@ namespace Goobo13
             typeof(ConsumeMinions).RegisterEntityState();
             typeof(Slam).RegisterEntityState();
             typeof(UnstableDecoy).RegisterEntityState();
+            typeof(Leap).RegisterEntityState();
             typeof(FireSpout).RegisterEntityState();
             typeof(TeleportBehind).RegisterEntityState();
             typeof(TeleportForward).RegisterEntityState();
             typeof(EnterDimension).RegisterEntityState();
+            typeof(Ball).RegisterEntityState();
+            typeof(CloneFlying).RegisterEntityState();
             GooboCorrosionDot = Utils.CreateDOT(GooboCorrosion, out GooboCorrosionDotIndex, true, 1f, 1f, DamageColorIndex.DeathMark, null);
             GooboDeployableSlot = DeployableAPI.RegisterDeployableSlot(GetGobooDeployableSlot);
             OrbAPI.AddOrb<GooboOrb>();
             OrbAPI.AddOrb<GooboConsumeOrb>();
             NetworkingAPI.RegisterMessageType<AddSlamSkillOverride>();
-            ContentManager.collectContentPackProviders += (addContentPackProvider) => addContentPackProvider(new Content());
+            ContentManager.collectContentPackProviders += (addContentPackProvider) => addContentPackProvider(new GooboContentPack());
         }
         public static int GetGobooDeployableSlot(CharacterMaster self, int deployableSlotMultiplier) => self.inventory && self.inventory.GetItemCount(GooboJuxtaposePassive) > 0 ? SummonGoobosConfig.maxAmount.Value : 0;
     }

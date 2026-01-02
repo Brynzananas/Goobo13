@@ -226,11 +226,6 @@ namespace Goobo13
                         CharacterMaster decoyMaster = Utils.SpawnGooboClone(obj.attackerMaster, vector3, Quaternion.identity);
                     }
                 }
-                if (damageInfo.HasModdedDamageType(Assets.AbysstouchedDamageType))
-                {
-                    RevolutionaryController revolutionaryController = attackerBody.GetComponent<RevolutionaryController>();
-                    if (revolutionaryController != null) revolutionaryController.currentTarget = victimBody;
-                }
             }
         }
         public static void UnsetHooks()

@@ -14,7 +14,6 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.UIElements;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace Goobo13
 {
@@ -201,6 +200,20 @@ namespace Goobo13
         public void Awake()
         {
             indicator = new Indicator(gameObject, Assets.GooboCloneMissileTrackingIndicator);
+        }
+        public void OnEnable()
+        {
+            GlobalEventManager.onServerDamageDealt += GlobalEventManager_onServerDamageDealt;
+        }
+
+        private void GlobalEventManager_onServerDamageDealt(DamageReport obj)
+        {
+            if (obj.attacker && obj.attacker == gameObject && obj.damageInfo.HasModdedDamageType(Assets.AbysstouchedDamageType)) currentTarget = obj.victimBody;
+        }
+
+        public void OnDisable()
+        {
+            GlobalEventManager.onServerDamageDealt -= GlobalEventManager_onServerDamageDealt;
         }
         public void FixedUpdate()
         {
@@ -442,6 +455,103 @@ namespace Goobo13
                 done = true;
                 Destroy(this);
             }
+        }
+    }
+    [RequireComponent(typeof(VehicleSeat))]
+    public class GooboBallVehicleController : MonoBehaviour
+    {
+        public Rigidbody rigidbody;
+        public VehicleSeat vehicleSeat;
+        public GameObject effectOnExit;
+        public GameObject effectOnCollision;
+        public float effectScale;
+        public float effectOnCollisionScale;
+        public int bounceAmount;
+        public R2API.AddressReferencedAssets.AddressReferencedBuffDef buffDef;
+        [HideInInspector] public Ball ball;
+        private int bounceCount;
+        public void Awake()
+        {
+            if (!rigidbody) rigidbody = GetComponent<Rigidbody>();
+        }
+
+        public void Start()
+        {
+            CharacterBody characterBody = vehicleSeat.currentPassengerBody;
+            if (!characterBody) return;
+            NetworkStateMachine networkStateMachine = characterBody.GetComponent<NetworkStateMachine>();
+            if (!networkStateMachine || networkStateMachine.stateMachines == null) return;
+            foreach (EntityStateMachine entityStateMachine in networkStateMachine.stateMachines)
+            {
+                if (!entityStateMachine || entityStateMachine.state == null) continue;
+                if (entityStateMachine.state is Ball ball && !ball.stateTaken)
+                {
+                    ball.stateTaken = true;
+                    this.ball = ball;
+                    break;
+                }
+            }
+
+        }
+        public void OnEnable()
+        {
+            vehicleSeat.onPassengerEnter += VehicleSeat_onPassengerEnter;
+            vehicleSeat.onPassengerExit += VehicleSeat_onPassengerExit;
+        }
+
+        private void VehicleSeat_onPassengerExit(GameObject obj)
+        {
+            if (bounceCount > bounceAmount && ball != null) ball.Explode(transform.position);
+            /*EffectData effectData = new()
+            {
+                origin = transform.position,
+                scale = effectScale,
+            };
+            EffectManager.SpawnEffect(effectOnExit, effectData, false);*/
+            if (NetworkServer.active) Destroy(gameObject);
+        }
+
+        private void VehicleSeat_onPassengerEnter(GameObject obj)
+        {
+
+        }
+        public void FixedUpdate()
+        {
+            if (rigidbody && ball.isAuthority && ball.inputBank)
+            {
+                Vector3 vector3 = rigidbody.velocity;
+                vector3.y = 0f;
+                vector3 = Vector3.MoveTowards(vector3, ball.inputBank.moveVector * ball.speed, ball.airControl * Time.fixedDeltaTime);
+                vector3.y = rigidbody.velocity.y;
+                rigidbody.velocity = vector3;
+            }
+            if (!vehicleSeat || !vehicleSeat.currentPassengerBody) return;
+            if (NetworkServer.active && buffDef && buffDef.Asset && !vehicleSeat.currentPassengerBody.HasBuff(buffDef.Asset)) vehicleSeat.currentPassengerBody.AddBuff(buffDef.Asset);
+        }
+        public void OnCollisionEnter(Collision collision)
+        {
+            /*EffectData effectData = new()
+            {
+                origin = transform.position,
+                scale = effectOnCollisionScale,
+            };
+            EffectManager.SpawnEffect(effectOnCollision, effectData, false);*/
+            bounceCount++;
+            if (ball != null && ball.isAuthority)
+            {
+                ball.Explode(collision.contacts[0].point);
+                if (ball.inputBank && rigidbody)
+                {
+                    rigidbody.velocity = collision.contacts[0].normal * ball.jump + ball.inputBank.moveVector * ball.speed + Physics.gravity * -0.2f;
+                }
+            }
+            if (bounceCount <= bounceAmount || !NetworkServer.active || !vehicleSeat) return;
+            vehicleSeat.CallCmdEjectPassenger();
+        }
+        public void OnDestroy()
+        {
+            if (ball == null || !ball.isAuthority) return;
+            ball.outer.SetNextStateToMain();
         }
     }
     /*

@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Goobo13
 {
-    public class Content : IContentPackProvider
+    public class GooboContentPack : IContentPackProvider
     {
         internal ContentPack contentPack = new ContentPack();
         public string identifier => Goobo13Plugin.ModGuid + ".ContentProvider";

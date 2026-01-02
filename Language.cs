@@ -29,14 +29,14 @@ namespace Goobo13
             AddLanguageToken("KEYWORD_JUXTAPOSE", $"{keywordPrefix}Juxtapose{endPrefix}{subPrefix}On hit spawn Goobo clone with {Hooks.GooboChanceSpawn}% chance. <i>Goobo clones have {Hooks.copyStatsPercentage}% stats of their owner.</i>{endPrefix}");
             AddLanguageToken(Assets.GooboPunch.skillNameToken, "Goobo Punch");
             AddLanguageToken(Assets.GooboPunch.skillDescriptionToken, $"{utilityPrefix}Juxtapose{endPrefix}. Swing at nearby enemies for {damagePrefix}{Punch.baseDamageCoefficient * 100f}% damage{endPrefix}. Third Every 3rd hit strikes in a greater area and {utilityPrefix}Juxtaposes{endPrefix}.");
-            AddLanguageToken(Assets.GooboGrenade.skillNameToken, "Goobo Grenade");
-            AddLanguageToken(Assets.GooboGrenade.skillDescriptionToken, $"Throw a random grenade for {damagePrefix}{ThrowGrenade.damageCoefficient * 100f} damage{endPrefix}.");
+            //AddLanguageToken(Assets.GooboGrenade.skillNameToken, "Goobo Grenade");
+            //AddLanguageToken(Assets.GooboGrenade.skillDescriptionToken, $"Throw a random grenade for {damagePrefix}{ThrowGrenade.damageCoefficient * 100f} damage{endPrefix}.");
             AddLanguageToken(Assets.GooboMissile.skillNameToken, "Goobo Missile");
             AddLanguageToken(Assets.GooboMissile.skillDescriptionToken, $"{damagePrefix}Corrosive{endPrefix}. Fire a seeking missile for {damagePrefix}{GooboMissile.damageCoefficient * 100f} damage{endPrefix} and {damagePrefix}Corrode{endPrefix} enemy. {utilityPrefix}Juxtaposes {GooboMissile.baseGooboAmount} " + (GooboMissile.baseGooboAmount > 1 ? "clones" : "clone") + $"{endPrefix}.");
             AddLanguageToken(Assets.CloneWalk.skillNameToken, "Clone Walk");
             AddLanguageToken(Assets.CloneWalk.skillDescriptionToken, $"Become {utilityPrefix}invisible for {Decoy.cloakDuration} seconds{endPrefix} and {utilityPrefix}juxtapose 1 clone{endPrefix}");
-            AddLanguageToken(Assets.UnstableCloneWalk.skillNameToken, "Unstable Clone Walk");
-            AddLanguageToken(Assets.UnstableCloneWalk.skillDescriptionToken, $"Become {utilityPrefix}invulnerable for {UnstableDecoy.baseDuration} seconds{endPrefix} and {utilityPrefix}juxtapose {UnstableDecoy.gooboAmount} " + (UnstableDecoy.gooboAmount > 1 ? "clones" : "clone") + $"{endPrefix}.");
+            //AddLanguageToken(Assets.UnstableCloneWalk.skillNameToken, "Unstable Clone Walk");
+            //AddLanguageToken(Assets.UnstableCloneWalk.skillDescriptionToken, $"Become {utilityPrefix}invulnerable for {UnstableDecoy.baseDuration} seconds{endPrefix} and {utilityPrefix}juxtapose {UnstableDecoy.gooboAmount} " + (UnstableDecoy.gooboAmount > 1 ? "clones" : "clone") + $"{endPrefix}.");
             AddLanguageToken(Assets.CorrosiveDogpile.skillNameToken, "Corrosive Dogpile");
             AddLanguageToken(Assets.CorrosiveDogpile.skillDescriptionToken, $"Fire all your clones to targeted enemy for {damagePrefix}{FireMinions.damageCoefficient * 100f}% damage{endPrefix}");
             AddLanguageToken(Assets.GooboConsumption.skillNameToken, "Corrosive Consumption");

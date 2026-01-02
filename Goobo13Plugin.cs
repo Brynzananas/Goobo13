@@ -43,13 +43,15 @@ namespace Goobo13
             TrackerConfig.Init();
             PunchConfig.Init();
             SuperPunchConfig.Init();
-            ThrowGrenadeConfig.Init();
+            //ThrowGrenadeConfig.Init();
             DecoyConfig.Init();
             FireMinionsConfig.Init();
             GooboMissileConfig.Init();
             ConsumeMinionsConfig.Init();
-            UnstableDecoyConfig.Init();
-            LeapConfig.Init();
+            //UnstableDecoyConfig.Init();
+            BallConfig.Init();
+            //LeapConfig.Init();
+            ThrowCloneConfig.Init();
             Hooks.SetHooks();
         }
         public void OnDestroy()

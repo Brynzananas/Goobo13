@@ -99,7 +99,9 @@ namespace Goobo13
     public class GooboConsumeOrb : Orb
     {
         public GameObject visualPrefab;
+        public float heal;
         public float effectScale = 1f;
+        public bool addSlam;
         public override void OnArrival()
         {
             base.OnArrival();
@@ -111,10 +113,13 @@ namespace Goobo13
             if (!skillLocator) return;
             GenericSkill genericSkill = skillLocator.primary;
             if (!genericSkill) return;
-            if (!characterBody.HasBuff(Assets.GooboConsumptionCharge)) new AddSlamSkillOverride(characterBody.netId).Send(R2API.Networking.NetworkDestination.Clients);
-            characterBody.AddBuff(Assets.GooboConsumptionCharge);
+            if (addSlam)
+            {
+                if (!characterBody.HasBuff(Assets.GooboConsumptionCharge)) new AddSlamSkillOverride(characterBody.netId).Send(R2API.Networking.NetworkDestination.Clients);
+                characterBody.AddBuff(Assets.GooboConsumptionCharge);
+            }
             healthComponent.itemCounts.barrierOnOverHeal++;
-            healthComponent.HealFraction(ConsumeMinionsConfig.healPercentage.Value / 100f, default);
+            healthComponent.HealFraction(heal, default);
             healthComponent.itemCounts.barrierOnOverHeal--;
         }
         public override void Begin()

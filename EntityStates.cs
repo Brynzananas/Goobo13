@@ -2,6 +2,7 @@
 using HG;
 using MonoMod.RuntimeDetour;
 using R2API;
+using Rewired.UI.ControlMapper;
 using RoR2;
 using RoR2.Audio;
 using RoR2.CameraModes;
@@ -16,6 +17,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UIElements;
 using UnityEngine.UIElements.StyleSheets;
+using static Rewired.ComponentControls.Effects.RotateAroundAxis;
 using static RoR2.CameraRigController;
 using static UnityEngine.ParticleSystem.PlaybackState;
 
@@ -328,12 +330,98 @@ namespace Goobo13
             if (!isAuthority) return;
             if (fixedAge >= duration) outer.SetNextStateToMain();
         }
+        public override InterruptPriority GetMinimumInterruptPriority()
+        {
+            return InterruptPriority.PrioritySkill;
+        }
         public void SetValues()
         {
             timeToThrow = baseTimeToThrow / characterBody.attackSpeed;
             duration = baseDuration / characterBody.attackSpeed;
             upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
             downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
+        }
+    }
+    public class ThrowClone : BaseGooboState
+    {
+        public static float baseTimeToThrow => ThrowCloneConfig.timeToAttack.Value;
+        public static float baseDuration => ThrowCloneConfig.duration.Value;
+        public static int amount => ThrowCloneConfig.amount.Value;
+        public static float force => ThrowCloneConfig.velocity.Value;
+        public static float forceStacking => ThrowCloneConfig.velocityStacking.Value;
+        public static float baseUpTransitionSpeed = 0.05f;
+        public static float baseDownTransitionSpeed = 0.05f;
+        public float upTransitionSpeed;
+        public float downTransitionSpeed;
+        public float timeToThrow;
+        public float duration;
+        private bool fired;
+
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            StartAimMode();
+            SetValues();
+            PlayCrossfade("UpperBody, Override", "ThrowUp", "UpperBody.playbackRate", Mathf.Max(0.01f, timeToThrow), upTransitionSpeed);
+        }
+        public void SetValues()
+        {
+            timeToThrow = baseTimeToThrow / characterBody.attackSpeed;
+            duration = baseDuration / characterBody.attackSpeed;
+            upTransitionSpeed = baseUpTransitionSpeed / characterBody.attackSpeed;
+            downTransitionSpeed = baseDownTransitionSpeed / characterBody.attackSpeed;
+        }
+        public void Fire(Ray ray)
+        {
+            fired = true;
+            PlayAnimation("UpperBody, Override", "ThrowDown", "UpperBody.playbackRate", Mathf.Max(0.01f, duration - timeToThrow), downTransitionSpeed);
+            if (NetworkServer.active)
+            {
+                bool crit = RollCrit();
+                GobooThrowGooboMinionsTracker gobooThrowGooboMinionsTracker = gameObject.GetComponent<GobooThrowGooboMinionsTracker>();
+                float velocity = force;
+                Quaternion quaternion = Util.QuaternionSafeLookRotation(ray.direction);
+                for (int i = 0; i < amount; i++)
+                {
+                    CharacterMaster characterMaster = Utils.SpawnGooboClone(this.characterBody.master, ray.origin, quaternion);
+                    if (!characterMaster) continue;
+                    CharacterBody characterBody = characterMaster.GetBody();
+                    if (!characterBody) continue;
+                    GameObject masterObject = characterBody.masterObject; // Without this inventory in body is null
+                    Vector3 vector3 = ray.direction * velocity + Physics.gravity * -0.2f;
+                    if (characterBody.characterMotor)
+                    {
+                        characterBody.characterMotor.velocity = vector3;
+                    }
+                    else if (characterBody.rigidbody)
+                    {
+                        characterBody.rigidbody.velocity = vector3;
+                    }
+                    EntityStateMachine entityStateMachine = characterBody.gameObject.GetComponent<EntityStateMachine>();
+                    if (entityStateMachine)
+                    {
+                        entityStateMachine.initialStateType.stateType = null;
+                        entityStateMachine.SetNextState(new CloneFlying {attacker = gameObject, attackerBody = this.characterBody, crit = crit, damageSource = GetDamageSource() });
+                    }
+                    //if (characterBody.skillLocator && characterBody.skillLocator.primary) characterBody.skillLocator.primary.ExecuteIfReady();
+                    if (gobooThrowGooboMinionsTracker && gobooThrowGooboMinionsTracker.trackingTarget && gobooThrowGooboMinionsTracker.trackingTarget.healthComponent && characterMaster.AiComponents != null)
+                    {
+                        foreach (BaseAI baseAI in characterMaster.AiComponents)
+                        {
+                            if (!baseAI || baseAI.currentEnemy == null) continue;
+                            baseAI.currentEnemy.gameObject = gobooThrowGooboMinionsTracker.trackingTarget.healthComponent.gameObject;
+                        }
+                    }
+                    velocity += forceStacking;
+                }
+            }
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (!fired && fixedAge >= timeToThrow) Fire(GetAimRay());
+            if (!isAuthority) return;
+            if (fixedAge >= duration) outer.SetNextStateToMain();
         }
         public override InterruptPriority GetMinimumInterruptPriority()
         {
@@ -467,6 +555,17 @@ namespace Goobo13
                     target = trackingTarget,
                     visualPrefab = Assets.GooboOrb.prefab
                 };
+                GooboConsumeOrb gooboConsumeOrb = new GooboConsumeOrb
+                {
+                    duration = timeToTarget,
+                    effectScale = 1f,
+                    origin = minionBody.corePosition,
+                    target = characterBody.mainHurtBox,
+                    visualPrefab = Assets.GooboOrb.prefab,
+                    addSlam = false,
+                    heal = FireMinionsConfig.healPercentage.Value / 100f,
+                };
+                OrbManager.instance.AddOrb(gooboConsumeOrb);
                 OrbManager.instance.AddOrb(gooboOrb);
                 //Fire(position, direction, distance);
             }
@@ -840,7 +939,9 @@ namespace Goobo13
                     effectScale = 1f,
                     origin = minionBody.corePosition,
                     target = characterBody.mainHurtBox,
-                    visualPrefab = Assets.GooboOrb.prefab
+                    visualPrefab = Assets.GooboOrb.prefab,
+                    addSlam = true,
+                    heal = ConsumeMinionsConfig.healPercentage.Value / 100f,
                 };
                 OrbManager.instance.AddOrb(gooboConsumeOrb);
                 minionMaster.TrueKill();
@@ -1097,6 +1198,187 @@ namespace Goobo13
         }
         public void SetStep(int i) => leapCount = i + 1;
         public override InterruptPriority GetMinimumInterruptPriority() => InterruptPriority.PrioritySkill;
+    }
+    public class Ball : BaseGooboState
+    {
+        public static float baseJumpMultiplier => BallConfig.jumpCoefficient.Value;
+        public static float baseSpeedMultiplier => BallConfig.speedCoefficient.Value;
+        public static float baseAirControlMultiplier => BallConfig.airControlCoefficient.Value;
+        public static float effectScale = 3f;
+        public float jump;
+        public float speed;
+        public float airControl;
+        public bool stateTaken;
+        public static float damageCoefficient => BallConfig.damageCoefficient.Value;
+        public static float force => BallConfig.force.Value;
+        public static DamageTypeCombo damageType => BallConfig.damageType.Value;
+        public static DamageTypeExtended damageTypeExtended => BallConfig.damageTypeExtended.Value;
+        public static BlastAttack.FalloffModel falloffModel => BallConfig.falloffModel.Value;
+        public static float procCoefficient => BallConfig.procCoefficient.Value;
+        public static float radius => BallConfig.radius.Value;
+
+        public virtual void SetValues()
+        {
+            speed = this.characterBody.moveSpeed * baseSpeedMultiplier;
+            airControl = characterBody.acceleration * baseAirControlMultiplier;
+            jump = characterBody.jumpPower * baseJumpMultiplier;
+        }
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            /*EffectData effectData = new()
+            {
+                origin = characterBody.corePosition,
+                scale = effectScale,
+            };
+            EffectManager.SpawnEffect(Assets.GooboExplosion.index, effectData, false);*/
+            characterBody.isSprinting = true;
+            SetValues();
+            Explode(characterBody.corePosition);
+            if (NetworkServer.active)
+            {
+                Ray ray = GetAimRay();
+                Quaternion quaternion = Util.QuaternionSafeLookRotation(ray.direction);
+                Utils.SpawnGooboClone(characterBody.master, transform.position, quaternion);
+                GameObject gameObject = GameObject.Instantiate(Assets.GooboBallVehicle, ray.origin, quaternion);
+                if (gameObject)
+                {
+                    Rigidbody rigidbody = gameObject.GetComponent<Rigidbody>();
+                    if (rigidbody) rigidbody.velocity = Physics.gravity.normalized * -jump + inputBank.moveVector * speed + Physics.gravity * -0.2f;
+                    GooboBallVehicleController gooboBallVehicleController = gameObject.GetComponent<GooboBallVehicleController>();
+                    if (gooboBallVehicleController)
+                    {
+                        VehicleSeat vehicleSeat = gooboBallVehicleController.vehicleSeat;
+                        if (vehicleSeat)
+                        {
+                            vehicleSeat.AssignPassenger(this.gameObject);
+                        }
+                    }
+                    NetworkUser networkUser;
+                    if (characterBody == null)
+                    {
+                        networkUser = null;
+                    }
+                    else
+                    {
+                        CharacterMaster master = characterBody.master;
+                        if (master == null)
+                        {
+                            networkUser = null;
+                        }
+                        else
+                        {
+                            PlayerCharacterMasterController playerCharacterMasterController = master.playerCharacterMasterController;
+                            networkUser = ((playerCharacterMasterController != null) ? playerCharacterMasterController.networkUser : null);
+                        }
+                    }
+                    if (networkUser)
+                    {
+                        NetworkServer.SpawnWithClientAuthority(gameObject, networkUser.gameObject);
+                    }
+                    else
+                    {
+                        NetworkServer.Spawn(gameObject);
+                    }
+                }
+            }
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            SetValues();
+        }
+        public void Explode(Vector3 position)
+        {
+            if (isAuthority)
+            {
+                BlastAttack blastAttack = new BlastAttack()
+                {
+                    attacker = gameObject,
+                    baseDamage = characterBody.damage * damageCoefficient,
+                    baseForce = force,
+                    crit = RollCrit(),
+                    damageType = new DamageTypeCombo(damageType, damageTypeExtended, GetDamageSource()),
+                    falloffModel = falloffModel,
+                    damageColorIndex = DamageColorIndex.Default,
+                    inflictor = gameObject,
+                    losType = BlastAttack.LoSType.None,
+                    procCoefficient = procCoefficient,
+                    radius = radius,
+                    teamIndex = GetTeam(),
+                    impactEffect = Assets.GooboImpact.index,
+                    position = position
+                };
+                blastAttack.AddModdedDamageType(Assets.GooboCorrosionDamageType);
+                blastAttack.Fire();
+                EffectData effectData = new()
+                {
+                    origin = blastAttack.position,
+                    scale = blastAttack.radius,
+                };
+                EffectManager.SpawnEffect(Assets.GooboExplosion.prefab, effectData, true);
+            }
+        }
+        public override InterruptPriority GetMinimumInterruptPriority() => InterruptPriority.PrioritySkill;
+    }
+    public class CloneFlying : BaseState
+    {
+        public static float damageCoefficient = 5f;
+        public static float procCoefficient = 1f;
+        public static DamageType damageType = DamageType.Generic;
+        public static DamageTypeExtended damageTypeExtended = DamageTypeExtended.Generic;
+        public HitBoxGroup hitBoxGroup;
+        public OverlapAttack overlapAttack;
+        public DamageSource damageSource;
+        public GameObject attacker;
+        public CharacterBody attackerBody;
+        public bool crit;
+        public bool hasEvent;
+        public override void OnEnter()
+        {
+            base.OnEnter();
+            if (!characterMotor)
+            {
+                if (isAuthority) outer.SetNextStateToMain();
+                return;
+            }
+            if (isAuthority)
+            {
+                characterMotor.onHitGroundAuthority += CharacterMotor_onHitGroundAuthority;
+                hasEvent = true;
+            }
+            if (!NetworkServer.active) return;
+            hitBoxGroup = FindHitBoxGroup("Flying");
+            if (!hitBoxGroup) return;
+            overlapAttack = new OverlapAttack
+            {
+                attacker = attacker ?? gameObject,
+                damage = (attackerBody ? attackerBody.damage : characterBody.damage) * damageCoefficient,
+                damageType = new DamageTypeCombo(damageType, damageTypeExtended, damageSource),
+                hitBoxGroup = hitBoxGroup,
+                hitEffectPrefab = Assets.GooboPunchEffect.prefab,
+                inflictor = gameObject,
+                isCrit = crit,
+                procCoefficient = procCoefficient,
+                teamIndex = attacker ? TeamComponent.GetObjectTeam(attacker) : GetTeam()
+            };
+        }
+        private void CharacterMotor_onHitGroundAuthority(ref CharacterMotor.HitGroundInfo hitGroundInfo)
+        {
+            outer.SetNextStateToMain();
+        }
+        public override void FixedUpdate()
+        {
+            base.FixedUpdate();
+            if (overlapAttack == null) return;
+            overlapAttack.Fire();
+            overlapAttack.damage = (attackerBody ? attackerBody.damage : characterBody.damage) * damageCoefficient;
+        }
+        public override void OnExit()
+        {
+            base.OnExit();
+            if (hasEvent)  characterMotor.onHitGroundAuthority -= CharacterMotor_onHitGroundAuthority;
+        }
     }
     public class FireSpout : BaseState
     {

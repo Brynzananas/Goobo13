@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
-using static Goobo13.Content;
+using static Goobo13.GooboContentPack;
 using static R2API.DotAPI;
 
 namespace Goobo13
@@ -36,6 +36,8 @@ namespace Goobo13
         public const string LeapName = "Leap";
         public const string SlamName = "Slam";
         public const string ThrowGrenadeName = "Goobo Grenade";
+        public const string ThrowCloneName = "Goobo Clone";
+        public const string BallName = "Ball";
         public const string GooboMissileName = "Goobo Missile";
         public const string DecoyName = "Clone Walk";
         public const string UnstableDecoyName = "Unstable Clone Walk";
@@ -273,6 +275,12 @@ namespace Goobo13
             onProjectileRegistered?.Invoke(projectile);
             return projectile;
         }
+        public static GameObject RegisterNetworkPrefab(this GameObject prefab, Action<GameObject> onNetworkPrefabRegistered = null)
+        {
+            networkPrefabs.Add(prefab);
+            onNetworkPrefabRegistered?.Invoke(prefab);
+            return prefab;
+        }
         public static EffectDef RegisterEffect(this GameObject effect, Action<GameObject> onEffectRegistered = null)
         {
             EffectDef effectDef = new EffectDef
@@ -282,11 +290,6 @@ namespace Goobo13
             effects.Add(effectDef);
             onEffectRegistered?.Invoke(effect);
             return effectDef;
-        }
-        public static GameObject RegisterNetworkPrefab(this GameObject networkPrefab, Action<GameObject> onnetworkPrefabRegistered = null)
-        {
-            networkPrefabs.Add(networkPrefab);
-            return networkPrefab;
         }
         public static Type RegisterEntityState(this Type type)
         {
